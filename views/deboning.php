@@ -2,12 +2,14 @@
 declare(strict_types=1);
 
 use Config\Security;
+
+ob_start();
 ?>
 
 <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
     <div>
         <h1 class="page-title" style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin:0;">
-            Sala de Desposte Cárcnico
+            Sala de Desposte Cárnico
         </h1>
         <p style="color:var(--text-secondary); margin-top:0.25rem; font-size:0.9rem;">
             Control multi-línea, pesaje táctil de cortes, generación automática de lotes y costeo con absorción de merma.
@@ -412,3 +414,11 @@ use Config\Security;
 </style>
 
 <script src="/js/deboning.js"></script>
+
+<?php
+$content = ob_get_clean();
+$title = 'Sala de Desposte - ST Despostadora';
+$pageTitle = 'Sala de Desposte Cárnico';
+$activeNav = 'deboning';
+
+require __DIR__ . '/layout.php';
