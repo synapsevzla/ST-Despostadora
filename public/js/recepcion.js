@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div style="display:flex; align-items:center; gap:0.75rem;">
                             <span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:1.05rem;">
-                                ${parseFloat(p.PesoKg).toFixed(2)} kg
+                                ${parseFloat(p.PesoKg).toFixed(4)} kg
                             </span>
                             <span class="badge" style="background:${badgeColor}; color:${textColor}; font-size:0.75rem;">
                                 ${estadoTxt}

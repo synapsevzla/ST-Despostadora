@@ -136,17 +136,17 @@ ob_start();
 
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label" for="rec_peso_bruto">Peso Bruto (Kg) *</label>
-                <input type="number" step="0.01" min="0" name="peso_bruto" id="rec_peso_bruto" class="form-input" value="0.00" style="font-size:1.15rem; font-weight:700;">
+                <input type="number" step="0.0001" min="0" name="peso_bruto" id="rec_peso_bruto" class="form-input" value="0.0000" style="font-size:1.15rem; font-weight:700;">
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label" for="rec_tara">Tara Transporte / Ganchos (Kg)</label>
-                <input type="number" step="0.01" min="0" name="tara" id="rec_tara" class="form-input" value="0.00" style="font-size:1.15rem; font-weight:700;">
+                <input type="number" step="0.0001" min="0" name="tara" id="rec_tara" class="form-input" value="0.0000" style="font-size:1.15rem; font-weight:700;">
             </div>
 
             <div class="form-group" style="margin-bottom:0;">
                 <label class="form-label" for="rec_peso_neto">Peso Neto Obtenido (Kg)</label>
-                <input type="number" step="0.01" min="0" name="peso_neto" id="rec_peso_neto" class="form-input" value="0.00" readonly style="background:var(--bg-main); font-size:1.25rem; font-weight:700; color:var(--primary); border-color:var(--primary);">
+                <input type="number" step="0.0001" min="0" name="peso_neto" id="rec_peso_neto" class="form-input" value="0.0000" readonly style="background:var(--bg-main); font-size:1.25rem; font-weight:700; color:var(--primary); border-color:var(--primary);">
             </div>
         </div>
 
@@ -155,7 +155,7 @@ ob_start();
             <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; text-align:center;">
                 <div>
                     <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Peso Promedio por Res</div>
-                    <div id="lbl_peso_promedio" style="font-size:1.5rem; font-weight:800; color:var(--primary);">0.00 kg</div>
+                    <div id="lbl_peso_promedio" style="font-size:1.5rem; font-weight:800; color:var(--primary);">0.0000 kg</div>
                 </div>
                 <div>
                     <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Costo Estimado por Cabeza</div>
@@ -184,11 +184,11 @@ ob_start();
             </div>
             <div>
                 <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Peso Neto Total</div>
-                <div id="lbl_ind_total_peso" style="font-size:1.8rem; font-weight:800; color:var(--text-primary);">0.00 kg</div>
+                <div id="lbl_ind_total_peso" style="font-size:1.8rem; font-weight:800; color:var(--text-primary);">0.0000 kg</div>
             </div>
             <div>
                 <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Peso Promedio</div>
-                <div id="lbl_ind_peso_promedio" style="font-size:1.8rem; font-weight:800; color:var(--accent);">0.00 kg</div>
+                <div id="lbl_ind_peso_promedio" style="font-size:1.8rem; font-weight:800; color:var(--accent);">0.0000 kg</div>
             </div>
             <div>
                 <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Valor Estimado del Lote</div>
@@ -202,7 +202,7 @@ ob_start();
                 <label class="form-label" style="margin-bottom:0.75rem;">Visor de Captura de Peso</label>
                 
                 <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-                    <input type="number" step="0.01" min="0.1" id="input_peso_individual" class="form-input" placeholder="0.00" style="font-size:1.75rem; font-weight:800; text-align:right; font-family:monospace; color:var(--primary); height:60px;">
+                    <input type="number" step="0.0001" min="0.0001" id="input_peso_individual" class="form-input" placeholder="0.0000" style="font-size:1.75rem; font-weight:800; text-align:right; font-family:monospace; color:var(--primary); height:60px;">
                     <button type="button" class="btn btn-primary" id="btnAgregarPieza" style="width:auto; min-width:140px; font-size:1.05rem;" data-action="agregar-pieza">
                         <svg class="icon" viewBox="0 0 24 24" style="width:20px; height:20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         + Agregar

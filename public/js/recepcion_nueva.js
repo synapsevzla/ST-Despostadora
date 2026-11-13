@@ -88,20 +88,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const bruto = parseFloat(inputPesoBruto?.value || '0') || 0;
         const tara = parseFloat(inputTara?.value || '0') || 0;
         const neto = Math.max(0, bruto - tara);
-        if (inputPesoNeto) inputPesoNeto.value = neto.toFixed(2);
+        if (inputPesoNeto) inputPesoNeto.value = neto.toFixed(4);
 
         const cant = parseInt(inputCantidad?.value || '1', 10) || 1;
         const opt = selectEspecie?.options[selectEspecie.selectedIndex];
         const costoUnit = parseFloat(opt?.getAttribute('data-costo') || '0') || 0;
 
         const costoTotal = neto * costoUnit;
-        if (lblCostoTotalEstandar) lblCostoTotalEstandar.textContent = '$' + costoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+        if (lblCostoTotalEstandar) lblCostoTotalEstandar.textContent = '$' + costoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
 
         if (metodoActual === 'PESO_CANTIDAD' && cant > 0) {
             const promPeso = neto / cant;
             const promCosto = costoTotal / cant;
-            if (lblPesoPromedio) lblPesoPromedio.textContent = promPeso.toFixed(2) + ' kg';
-            if (lblCostoPromedio) lblCostoPromedio.textContent = '$' + promCosto.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+            if (lblPesoPromedio) lblPesoPromedio.textContent = promPeso.toFixed(4) + ' kg';
+            if (lblCostoPromedio) lblCostoPromedio.textContent = '$' + promCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
         }
     }
 
@@ -153,6 +153,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     inputPesoInd.value = (inputPesoInd.value || '0') + '.';
                 }
             } else {
+                if (inputPesoInd.value.includes('.')) {
+                    const decimals = inputPesoInd.value.split('.')[1] || '';
+                    if (decimals.length >= 4) return; // Máximo 4 decimales
+                }
                 inputPesoInd.value += key;
             }
             inputPesoInd.focus();
@@ -177,7 +181,7 @@ document.addEventListener('DOMContentLoaded', () => {
             item.className = 'pieza-item';
 
             const info = document.createElement('div');
-            info.innerHTML = `<strong style="color:var(--text-primary);">Res #${idx + 1}</strong>: <span style="font-family:monospace; font-size:1.1rem; color:var(--primary); font-weight:700;">${peso.toFixed(2)} kg</span>`;
+            info.innerHTML = `<strong style="color:var(--text-primary);">Res #${idx + 1}</strong>: <span style="font-family:monospace; font-size:1.1rem; color:var(--primary); font-weight:700;">${peso.toFixed(4)} kg</span>`;
 
             const btnEliminar = document.createElement('button');
             btnEliminar.type = 'button';
@@ -209,9 +213,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const costoTotal = totalPeso * costoUnit;
 
         if (lblIndTotalPiezas) lblIndTotalPiezas.textContent = totalPiezas;
-        if (lblIndTotalPeso) lblIndTotalPeso.textContent = totalPeso.toFixed(2) + ' kg';
-        if (lblIndPesoPromedio) lblIndPesoPromedio.textContent = promPeso.toFixed(2) + ' kg';
-        if (lblIndCostoTotal) lblIndCostoTotal.textContent = '$' + costoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2 });
+        if (lblIndTotalPeso) lblIndTotalPeso.textContent = totalPeso.toFixed(4) + ' kg';
+        if (lblIndPesoPromedio) lblIndPesoPromedio.textContent = promPeso.toFixed(4) + ' kg';
+        if (lblIndCostoTotal) lblIndCostoTotal.textContent = '$' + costoTotal.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
         if (badgeTotalPiezasTop) badgeTotalPiezasTop.textContent = `${totalPiezas} Reses Capturadas`;
     }
 
@@ -253,9 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             formData.set('cantidad', piezasIndividuales.length.toString());
             const totalPeso = piezasIndividuales.reduce((acc, p) => acc + p, 0);
-            formData.set('peso_bruto', totalPeso.toFixed(2));
-            formData.set('tara', '0');
-            formData.set('peso_neto', totalPeso.toFixed(2));
+            formData.set('peso_bruto', totalPeso.toFixed(4));
+            formData.set('tara', '0.0000');
+            formData.set('peso_neto', totalPeso.toFixed(4));
             formData.set('pesos_individuales', JSON.stringify(piezasIndividuales));
         } else if (metodoActual === 'SOLO_PESO') {
             const neto = parseFloat(inputPesoNeto?.value || '0');

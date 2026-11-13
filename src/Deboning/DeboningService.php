@@ -22,7 +22,7 @@ final class DeboningService
         $pdo = Database::getConnection();
 
         $nroRecepcion = trim((string)($data['nro_recepcion'] ?? ''));
-        $lineaMesa = trim((string)($data['linea_mesa'] ?? 'Mesa 1'));
+        $lineaMesa = trim((string)($data['linea_mesa'] ?? ''));
         $nroEspecieDetalle = isset($data['nro_especie']) ? (int)$data['nro_especie'] : null;
         $pesoEntradaManual = isset($data['peso_entrada']) ? (float)$data['peso_entrada'] : 0.0;
         $observaciones = trim((string)($data['observaciones'] ?? ''));
@@ -419,23 +419,12 @@ final class DeboningService
                 $stmtUpdDet->bindValue(':id', $c['ID'], PDO::PARAM_INT);
                 $stmtUpdDet->execute();
 
-                $stmtStockCorte = $pdo->prepare("
-                    MERGE ST_Despostadora_Existencias AS target
-                    USING (SELECT :ubic AS CodUbic, :prod AS CodProd, :lote AS NroLote, 
-                                  CAST(:peso AS DECIMAL(18,4)) AS Peso, 
-                                  CAST(:costo AS DECIMAL(18,4)) AS Costo, 
-                                  CAST(:elab AS DATE) AS Elab, 
-                                  CAST(:venc AS DATE) AS Venc) AS source
+                $stmtStockCorte = $pdo->prepare("MERGE ST_Despostadora_Existencias AS target
+                    USING (SELECT :ubic AS CodUbic, :prod AS CodProd, :lote AS NroLote, CAST(:peso AS DECIMAL(18,4)) AS Peso, CAST(:costo AS DECIMAL(18,4)) AS Costo, CAST(:elab AS DATE) AS Elab, CAST(:venc AS DATE) AS Venc) AS source
                     ON (target.CodUbic = source.CodUbic AND target.CodProd = source.CodProd AND target.NroLote = source.NroLote)
-                    WHEN MATCHED THEN
-                        UPDATE SET StockActual = target.StockActual + source.Peso,
-                                   CostoUnitarioReal = source.Costo,
-                                   UltimaActualizacion = SYSUTCDATETIME()
-                    WHEN NOT MATCHED THEN
-                        INSERT (CodUbic, CodProd, NroLote, TipoExistencia, StockActual, StockComprometido,
-                                CostoUnitarioReal, FechaElaboracion, FechaVencimiento, UltimaActualizacion)
-                        VALUES (source.CodUbic, source.CodProd, source.NroLote, 'CORTE', source.Peso, 0, source.Costo, source.Elab, source.Venc, SYSUTCDATETIME());
-                ");
+                    WHEN MATCHED THEN UPDATE SET StockActual = target.StockActual + source.Peso, CostoUnitarioReal = source.Costo, UltimaActualizacion = SYSUTCDATETIME()
+                    WHEN NOT MATCHED THEN INSERT (CodUbic, CodProd, NroLote, TipoExistencia, StockActual, StockComprometido, CostoUnitarioReal, FechaElaboracion, FechaVencimiento, UltimaActualizacion)
+                    VALUES (source.CodUbic, source.CodProd, source.NroLote, 'CORTE', source.Peso, 0, source.Costo, source.Elab, source.Venc, SYSUTCDATETIME());");
                 $stmtStockCorte->bindValue(':ubic', $ord['CodUbic'], PDO::PARAM_STR);
                 $stmtStockCorte->bindValue(':prod', $c['CodProdCorte'], PDO::PARAM_STR);
                 $stmtStockCorte->bindValue(':lote', $c['NroLote'], PDO::PARAM_STR);
@@ -448,13 +437,9 @@ final class DeboningService
 
             if ($codProdMerma !== '' && (float)$ord['PesoMerma'] > 0) {
                 $nroLoteMerma = CorrelativeService::generateBatchNumber($pdo, $nroOrden, 99);
-                $stmtStockMerma = $pdo->prepare("
-                    INSERT INTO ST_Despostadora_Existencias
-                        (CodUbic, CodProd, NroLote, TipoExistencia, StockActual, StockComprometido,
-                         CostoUnitarioReal, FechaElaboracion, FechaVencimiento, UltimaActualizacion)
-                    VALUES
-                        (:ubic, :prod, :lote, 'MERMA', :peso, 0, 0, CAST(GETDATE() AS DATE), NULL, SYSUTCDATETIME())
-                ");
+                $stmtStockMerma = $pdo->prepare("INSERT INTO ST_Despostadora_Existencias
+                    (CodUbic, CodProd, NroLote, TipoExistencia, StockActual, StockComprometido, CostoUnitarioReal, FechaElaboracion, FechaVencimiento, UltimaActualizacion)
+                    VALUES (:ubic, :prod, :lote, 'MERMA', :peso, 0, 0, CAST(GETDATE() AS DATE), NULL, SYSUTCDATETIME())");
                 $stmtStockMerma->bindValue(':ubic', $ord['CodUbic'], PDO::PARAM_STR);
                 $stmtStockMerma->bindValue(':prod', $codProdMerma, PDO::PARAM_STR);
                 $stmtStockMerma->bindValue(':lote', $nroLoteMerma, PDO::PARAM_STR);
@@ -462,32 +447,23 @@ final class DeboningService
                 $stmtStockMerma->execute();
             }
 
-            $stmtDescargaCanal = $pdo->prepare("
-                UPDATE e
+            $stmtDescargaCanal = $pdo->prepare("UPDATE e
                 SET e.StockActual = CASE WHEN e.StockActual >= p.Peso THEN e.StockActual - p.Peso ELSE 0 END,
                     e.StockComprometido = CASE WHEN e.StockComprometido >= p.Peso THEN e.StockComprometido - p.Peso ELSE 0 END,
                     e.UltimaActualizacion = SYSUTCDATETIME()
                 FROM ST_Despostadora_Existencias e
                 CROSS JOIN (SELECT CAST(:peso AS DECIMAL(18,4)) AS Peso) p
-                WHERE e.CodUbic = :ubic AND e.CodProd = :prod AND e.NroLote = :lote
-            ");
+                WHERE e.CodUbic = :ubic AND e.CodProd = :prod AND e.NroLote = :lote");
             $stmtDescargaCanal->bindValue(':peso', $ord['PesoCanalEntrada'], PDO::PARAM_STR);
             $stmtDescargaCanal->bindValue(':ubic', $ord['CodUbic'], PDO::PARAM_STR);
             $stmtDescargaCanal->bindValue(':prod', $ord['CodProdCanal'], PDO::PARAM_STR);
             $stmtDescargaCanal->bindValue(':lote', $ord['NroRecepcion'], PDO::PARAM_STR);
             $stmtDescargaCanal->execute();
 
-            $stmtCierreOrd = $pdo->prepare("
-                UPDATE ST_Despostadora_Despostes
-                SET FechaHoraCierre = SYSUTCDATETIME(),
-                    PesoTotalCortes = :pesocortes,
-                    PesoMerma = :pesomerma,
-                    CostoPerdidaMerma = :perdidamerma,
-                    RendimientoPct = :rend,
-                    MermaPct = :merma,
-                    Estado = 'FINALIZADO'
-                WHERE NroOrdenDesposte = :nro
-            ");
+            $stmtCierreOrd = $pdo->prepare("UPDATE ST_Despostadora_Despostes
+                SET FechaHoraCierre = SYSUTCDATETIME(), PesoTotalCortes = :pesocortes, PesoMerma = :pesomerma,
+                    CostoPerdidaMerma = :perdidamerma, RendimientoPct = :rend, MermaPct = :merma, Estado = 'FINALIZADO'
+                WHERE NroOrdenDesposte = :nro");
             $stmtCierreOrd->bindValue(':pesocortes', $ord['PesoTotalCortes'], PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':pesomerma', $ord['PesoMerma'], PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':perdidamerma', $ord['PerdidaMermaDinero'], PDO::PARAM_STR);
@@ -551,23 +527,25 @@ final class DeboningService
     /**
      * @return list<array<string, mixed>>
      */
+    /**
+     * @return list<array<string, mixed>>
+     */
     public static function getActiveOrders(): array
     {
-        $pdo = Database::getConnection();
-        $sql = "SELECT d.NroOrdenDesposte, d.NroRecepcion, d.LineaMesa, d.FechaHoraInicio, d.CodUsua, d.CodProdCanal,
-                       LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal,
-                       CAST(d.PesoCanalEntrada AS FLOAT) AS PesoCanalEntrada,
-                       CAST(d.PesoTotalCortes AS FLOAT) AS PesoTotalCortes,
-                       CAST(d.PesoMerma AS FLOAT) AS PesoMerma,
-                       CAST(d.RendimientoPct AS FLOAT) AS RendimientoPct,
-                       CAST(d.MermaPct AS FLOAT) AS MermaPct, d.Estado,
-                       (SELECT COUNT(1) FROM ST_Despostadora_DespostesDetalle det WHERE det.NroOrdenDesposte = d.NroOrdenDesposte) AS TotalCortesPesados
-                FROM ST_Despostadora_Despostes d
-                INNER JOIN SAPROD p ON p.CodProd = d.CodProdCanal
-                WHERE d.Estado = 'EN_PROCESO'
-                ORDER BY d.FechaHoraInicio DESC";
-        $stmt = $pdo->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return DeboningQueryService::getActiveOrders();
+    }
+
+    /**
+     * @return array{items: list<array<string, mixed>>, total: int, page: int, per_page: int, total_pages: int, fecha_desde: ?string, fecha_hasta: ?string}
+     */
+    public static function getOrdersPaginated(
+        ?string $fechaDesde = null,
+        ?string $fechaHasta = null,
+        int $page = 1,
+        int $perPage = 10,
+        ?string $estado = null
+    ): array {
+        return DeboningQueryService::getOrdersPaginated($fechaDesde, $fechaHasta, $page, $perPage, $estado);
     }
 
     /**
@@ -575,19 +553,6 @@ final class DeboningService
      */
     public static function getOrdersHistory(int $limit = 50): array
     {
-        $pdo = Database::getConnection();
-        $sql = "SELECT TOP ({$limit}) d.NroOrdenDesposte, d.NroRecepcion, d.LineaMesa, d.FechaHoraInicio, d.FechaHoraCierre,
-                       d.CodUsua, d.CodProdCanal,
-                       LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal,
-                       CAST(d.PesoCanalEntrada AS FLOAT) AS PesoCanalEntrada,
-                       CAST(d.PesoTotalCortes AS FLOAT) AS PesoTotalCortes,
-                       CAST(d.PesoMerma AS FLOAT) AS PesoMerma,
-                       CAST(d.RendimientoPct AS FLOAT) AS RendimientoPct,
-                       CAST(d.MermaPct AS FLOAT) AS MermaPct, d.Estado
-                FROM ST_Despostadora_Despostes d
-                INNER JOIN SAPROD p ON p.CodProd = d.CodProdCanal
-                ORDER BY d.FechaHoraInicio DESC";
-        $stmt = $pdo->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return DeboningQueryService::getOrdersHistory($limit);
     }
 }

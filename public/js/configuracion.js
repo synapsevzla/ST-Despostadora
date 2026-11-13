@@ -284,6 +284,184 @@ async function eliminarCorte(codCanal, codCorte) {
     }
 }
 
+// -------------------------------------------------------------
+// Funciones para Gestión de Mesas y Líneas Operativas
+// -------------------------------------------------------------
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function renderizarListaMesas(mesas) {
+    const contenedor = document.getElementById('contenedorListaMesas');
+    const badgeTotal = document.getElementById('badgeTotalMesas');
+    if (!contenedor) return;
+
+    const total = mesas.length;
+    if (badgeTotal) {
+        badgeTotal.className = `badge ${total > 0 ? 'badge-success' : 'badge-warning'}`;
+        badgeTotal.textContent = `${total} ${total === 1 ? 'mesa' : 'mesas'}`;
+    }
+
+    if (total === 0) {
+        contenedor.innerHTML = `
+            <div class="empty-state-mesas" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-main); border: 1px dashed var(--border-color); border-radius: 8px;">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 36px; height: 36px; margin-bottom: 0.5rem; opacity: 0.5;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">No hay mesas o líneas configuradas</p>
+                <p style="margin: 0.25rem 0 0; font-size: 0.82rem;">El sistema abrirá órdenes de desposte sin requerir asignación de mesa.</p>
+            </div>`;
+        return;
+    }
+
+    let html = '<div style="display: flex; flex-direction: column; gap: 0.75rem;">';
+    mesas.forEach(m => {
+        const esActiva = parseInt(m.Activo, 10) === 1;
+        html += `<div class="item-mesa-card" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <strong style="font-size: 1rem; color: var(--text-primary);">${escapeHtml(m.Nombre)}</strong>
+                    <span class="badge ${esActiva ? 'badge-success' : 'badge-warning'}" style="font-size: 0.7rem;">${esActiva ? 'ACTIVA' : 'INACTIVA'}</span>
+                </div>
+                ${m.Descripcion ? `<span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">${escapeHtml(m.Descripcion)}</span>` : ''}
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button" class="btn btn-outline btn-sm btn-editar-mesa" data-id="${m.ID}" data-nombre="${escapeHtml(m.Nombre)}" data-descripcion="${escapeHtml(m.Descripcion || '')}" data-activo="${m.Activo}" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;">Editar</button>
+                <button type="button" class="btn btn-sm btn-toggle-mesa" data-id="${m.ID}" data-activo="${esActiva ? 0 : 1}" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;">${esActiva ? 'Desactivar' : 'Activar'}</button>
+                <button type="button" class="btn btn-outline btn-sm btn-eliminar-mesa" data-id="${m.ID}" data-nombre="${escapeHtml(m.Nombre)}" style="border-color: rgba(220, 53, 69, 0.4); color: var(--danger); padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;">Eliminar</button>
+            </div>
+        </div>`;
+    });
+    html += '</div>';
+    contenedor.innerHTML = html;
+}
+
+function cancelarEdicionMesa() {
+    const idEl = document.getElementById('mesa_id');
+    const nomEl = document.getElementById('mesa_nombre');
+    const descEl = document.getElementById('mesa_descripcion');
+    const actEl = document.getElementById('mesa_activo');
+    const titEl = document.getElementById('tituloFormMesa');
+    const btnCancel = document.getElementById('btnCancelarEdicionMesa');
+    const btnGuardar = document.getElementById('btnGuardarMesa');
+
+    if (idEl) idEl.value = '';
+    if (nomEl) nomEl.value = '';
+    if (descEl) descEl.value = '';
+    if (actEl) actEl.value = '1';
+    if (titEl) titEl.textContent = 'Nueva Línea o Mesa Operativa';
+    if (btnCancel) btnCancel.style.display = 'none';
+    if (btnGuardar) btnGuardar.textContent = 'Guardar Mesa';
+}
+
+function editarMesa(id, nombre, descripcion, activo) {
+    const idEl = document.getElementById('mesa_id');
+    const nomEl = document.getElementById('mesa_nombre');
+    const descEl = document.getElementById('mesa_descripcion');
+    const actEl = document.getElementById('mesa_activo');
+    const titEl = document.getElementById('tituloFormMesa');
+    const btnCancel = document.getElementById('btnCancelarEdicionMesa');
+    const btnGuardar = document.getElementById('btnGuardarMesa');
+
+    if (idEl) idEl.value = id;
+    if (nomEl) nomEl.value = nombre;
+    if (descEl) descEl.value = descripcion;
+    if (actEl) actEl.value = activo;
+    if (titEl) titEl.textContent = `Editar Mesa: ${nombre}`;
+    if (btnCancel) btnCancel.style.display = 'inline-block';
+    if (btnGuardar) btnGuardar.textContent = 'Actualizar Mesa';
+
+    if (nomEl) nomEl.focus();
+}
+
+async function guardarMesa(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+
+    try {
+        const res = await fetch('/api/config/mesas/guardar', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message || 'Mesa guardada exitosamente.');
+            cancelarEdicionMesa();
+            if (data.mesas) {
+                renderizarListaMesas(data.mesas);
+            }
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo guardar la mesa'));
+        }
+    } catch (err) {
+        alert('Error de conexión al guardar la mesa.');
+    }
+}
+
+async function toggleEstadoMesa(id, nuevoActivo) {
+    const csrfTokenEl = document.querySelector('input[name="csrf_token"]');
+    const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
+
+    const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    formData.append('id', id);
+    formData.append('activo', nuevoActivo);
+
+    try {
+        const res = await fetch('/api/config/mesas/estado', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            if (data.mesas) {
+                renderizarListaMesas(data.mesas);
+            }
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo modificar el estado'));
+        }
+    } catch (err) {
+        alert('Error de conexión al cambiar estado de la mesa.');
+    }
+}
+
+async function eliminarMesa(id, nombre) {
+    if (!confirm(`¿Está seguro de eliminar la mesa "${nombre}"? Esta acción solo es posible si no tiene órdenes de desposte asociadas.`)) {
+        return;
+    }
+
+    const csrfTokenEl = document.querySelector('input[name="csrf_token"]');
+    const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
+
+    const formData = new FormData();
+    formData.append('csrf_token', csrfToken);
+    formData.append('id', id);
+
+    try {
+        const res = await fetch('/api/config/mesas/eliminar', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(data.message || 'Mesa eliminada correctamente.');
+            if (data.mesas) {
+                renderizarListaMesas(data.mesas);
+            }
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar la mesa'));
+        }
+    } catch (err) {
+        alert('Error de conexión al eliminar la mesa.');
+    }
+}
+
 // Inicialización de Event Listeners (sin inline handlers, 100% CSP compliant)
 document.addEventListener('DOMContentLoaded', () => {
     cargarProductosEspecie();
@@ -325,6 +503,41 @@ document.addEventListener('DOMContentLoaded', () => {
             limpiarFormEspecie();
             return;
         }
+
+        const btnEditarMesa = e.target.closest('.btn-editar-mesa');
+        if (btnEditarMesa) {
+            editarMesa(
+                parseInt(btnEditarMesa.dataset.id, 10),
+                btnEditarMesa.dataset.nombre,
+                btnEditarMesa.dataset.descripcion,
+                btnEditarMesa.dataset.activo
+            );
+            return;
+        }
+
+        const btnCancelMesa = e.target.closest('#btnCancelarEdicionMesa');
+        if (btnCancelMesa) {
+            cancelarEdicionMesa();
+            return;
+        }
+
+        const btnToggleMesa = e.target.closest('.btn-toggle-mesa');
+        if (btnToggleMesa) {
+            toggleEstadoMesa(
+                parseInt(btnToggleMesa.dataset.id, 10),
+                parseInt(btnToggleMesa.dataset.activo, 10)
+            );
+            return;
+        }
+
+        const btnEliminarMesa = e.target.closest('.btn-eliminar-mesa');
+        if (btnEliminarMesa) {
+            eliminarMesa(
+                parseInt(btnEliminarMesa.dataset.id, 10),
+                btnEliminarMesa.dataset.nombre
+            );
+            return;
+        }
     });
 
     // Inputs dinámicos de correlativos
@@ -344,6 +557,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const formAddCorte = document.getElementById('formAgregarCorte');
     if (formAddCorte) formAddCorte.addEventListener('submit', guardarNuevoCorte);
+
+    const formMesa = document.getElementById('formMesa');
+    if (formMesa) formMesa.addEventListener('submit', guardarMesa);
 
     document.querySelectorAll('.form-correlativo').forEach(f => {
         f.addEventListener('submit', (e) => guardarCorrelativo(e, f));

@@ -36,6 +36,10 @@ ob_start();
                 <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                 Especies y Matriz de Cortes
             </button>
+            <button type="button" class="tab-btn" data-tab="tab-mesas">
+                <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                Líneas y Mesas
+            </button>
         </div>
     </div>
 
@@ -72,7 +76,7 @@ ob_start();
 
                     <div class="form-group">
                         <label class="form-label" for="margen_default">Margen de Rentabilidad Objetivo (%)</label>
-                        <input type="number" step="0.01" min="0" max="100" name="margen_default" id="margen_default" class="form-input" value="<?= Security::escape($margenDefault) ?>" required>
+                        <input type="number" step="0.0001" min="0" max="100" name="margen_default" id="margen_default" class="form-input" value="<?= Security::escape(number_format((float)$margenDefault, 4, '.', '')) ?>" required>
                         <small style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 0.35rem;">
                             Utilidad sugerida para calcular el precio de venta real tras absorber la merma.
                         </small>
@@ -200,7 +204,7 @@ ob_start();
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label">Margen Utilidad Default (%)</label>
-                            <input type="number" step="0.01" name="margen" id="esp_margen" class="form-input" value="30.00" required>
+                            <input type="number" step="0.0001" name="margen" id="esp_margen" class="form-input" value="30.0000" required>
                         </div>
                         <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label">Venc. Refrigerado (Días)</label>
@@ -278,6 +282,124 @@ ob_start();
             </div>
         </div>
     </div>
+
+    <!-- SECCIÓN 4: Líneas y Mesas de Desposte -->
+    <div id="tab-mesas" class="config-tab-panel" style="display: none;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+            
+            <!-- Formulario para Crear / Editar Mesa -->
+            <div class="card">
+                <h4 style="margin-bottom: 0.5rem; color: var(--text-primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <svg class="icon" viewBox="0 0 24 24" style="color:var(--primary); width:20px; height:20px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    <span id="tituloFormMesa">Nueva Línea o Mesa Operativa</span>
+                </h4>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+                    Configure las mesas o líneas operativas de la sala. <strong>Si no crea ninguna mesa</strong>, el sistema abrirá las órdenes de desposte sin requerir asignación de mesa.
+                </p>
+
+                <form id="formMesa">
+                    <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token) ?>">
+                    <input type="hidden" name="id" id="mesa_id" value="">
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" for="mesa_nombre">Identificador o Nombre de la Mesa *</label>
+                        <input type="text" name="nombre" id="mesa_nombre" class="form-input" placeholder="Ej. Mesa 1, Mesa 2, Línea A, Deshuese 1" maxlength="50" required>
+                        <small style="color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 0.35rem;">
+                            Identificador que aparecerá en los botones de selección rápida en la sala.
+                        </small>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="form-label" for="mesa_descripcion">Descripción o Ubicación (Opcional)</label>
+                        <input type="text" name="descripcion" id="mesa_descripcion" class="form-input" placeholder="Ej. Área delantera, mesa de corte secundario" maxlength="150">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label class="form-label" for="mesa_activo">Estado</label>
+                        <select name="activo" id="mesa_activo" class="form-input">
+                            <option value="1">Activa (Disponible para operar)</option>
+                            <option value="0">Inactiva (Fuera de servicio)</option>
+                        </select>
+                    </div>
+
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                        <button type="button" id="btnCancelarEdicionMesa" class="btn" style="display: none; background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); width: auto;">
+                            Cancelar Edición
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarMesa" style="width: auto; min-width: 150px;">
+                            Guardar Mesa
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Listado de Mesas Configuradas -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h4 style="margin: 0; color: var(--text-primary); font-size: 1.1rem;">Mesas y Líneas Registradas</h4>
+                    <span id="badgeTotalMesas" class="badge <?= !empty($mesas) ? 'badge-success' : 'badge-warning' ?>">
+                        <?= count($mesas ?? []) ?> <?= count($mesas ?? []) === 1 ? 'mesa' : 'mesas' ?>
+                    </span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.25rem;">
+                    Mesas actualmente registradas para la operación en sala.
+                </p>
+
+                <div id="contenedorListaMesas">
+                    <?php if (empty($mesas)): ?>
+                        <div class="empty-state-mesas" style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); background: var(--bg-main); border: 1px dashed var(--border-color); border-radius: 8px;">
+                            <svg class="icon" viewBox="0 0 24 24" style="width: 36px; height: 36px; margin-bottom: 0.5rem; opacity: 0.5;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <p style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-secondary);">No hay mesas o líneas configuradas</p>
+                            <p style="margin: 0.25rem 0 0; font-size: 0.82rem;">El sistema abrirá órdenes de desposte sin requerir asignación de mesa.</p>
+                        </div>
+                    <?php else: ?>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <?php foreach ($mesas as $m): ?>
+                                <div class="item-mesa-card" style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                                    <div>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <strong style="font-size: 1rem; color: var(--text-primary);"><?= Security::escape($m['Nombre']) ?></strong>
+                                            <span class="badge <?= (int)$m['Activo'] === 1 ? 'badge-success' : 'badge-warning' ?>" style="font-size: 0.7rem;">
+                                                <?= (int)$m['Activo'] === 1 ? 'ACTIVA' : 'INACTIVA' ?>
+                                            </span>
+                                        </div>
+                                        <?php if (!empty($m['Descripcion'])): ?>
+                                            <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.2rem;">
+                                                <?= Security::escape($m['Descripcion']) ?>
+                                            </span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                        <button type="button" class="btn btn-outline btn-sm btn-editar-mesa" 
+                                                data-id="<?= (int)$m['ID'] ?>" 
+                                                data-nombre="<?= Security::escape($m['Nombre']) ?>" 
+                                                data-descripcion="<?= Security::escape($m['Descripcion'] ?? '') ?>" 
+                                                data-activo="<?= (int)$m['Activo'] ?>"
+                                                style="padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;">
+                                            Editar
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-toggle-mesa" 
+                                                data-id="<?= (int)$m['ID'] ?>" 
+                                                data-activo="<?= (int)$m['Activo'] === 1 ? 0 : 1 ?>"
+                                                style="background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;">
+                                            <?= (int)$m['Activo'] === 1 ? 'Desactivar' : 'Activar' ?>
+                                        </button>
+                                        <button type="button" class="btn btn-outline btn-sm btn-eliminar-mesa" 
+                                                data-id="<?= (int)$m['ID'] ?>" 
+                                                data-nombre="<?= Security::escape($m['Nombre']) ?>" 
+                                                style="border-color: rgba(220, 53, 69, 0.4); color: var(--danger); padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;">
+                                            Eliminar
+                                        </button>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+        </div>
+    </div>
 </div>
 
 <!-- Modal para Asociar Corte a Especie -->
@@ -307,11 +429,11 @@ ob_start();
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                 <div class="form-group">
                     <label class="form-label">% Rendimiento Esperado</label>
-                    <input type="number" step="0.01" min="0" max="100" name="rendimiento" class="form-input" value="0.00" required>
+                    <input type="number" step="0.0001" min="0" max="100" name="rendimiento" class="form-input" value="0.0000" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Margen Utilidad (%)</label>
-                    <input type="number" step="0.01" min="0" max="100" name="margen" class="form-input" value="30.00" required>
+                    <input type="number" step="0.0001" min="0" max="100" name="margen" class="form-input" value="30.0000" required>
                 </div>
             </div>
 

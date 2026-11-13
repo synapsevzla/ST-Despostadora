@@ -18,8 +18,12 @@ final class ReceptionController
         $user = AuthController::checkAuth();
 
         try {
+            $fechaDesde = !empty($_GET['fecha_desde']) ? trim((string)$_GET['fecha_desde']) : null;
+            $fechaHasta = !empty($_GET['fecha_hasta']) ? trim((string)$_GET['fecha_hasta']) : null;
+            $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+
             $species = ConfigService::getSpeciesList();
-            $receptions = ReceptionService::getReceptions();
+            $paginated = ReceptionService::getReceptionsPaginated($fechaDesde, $fechaHasta, $page, 10);
             $deposits = ConfigService::getDeposits();
             $defaultCodUbic = ConfigService::getConfig('DEFAULT_CODUBIC', '');
 
@@ -28,7 +32,10 @@ final class ReceptionController
             View::render('recepcion', [
                 'user' => $user,
                 'species' => $species,
-                'receptions' => $receptions,
+                'receptions' => $paginated['items'],
+                'pagination' => $paginated,
+                'fechaDesde' => $paginated['fecha_desde'],
+                'fechaHasta' => $paginated['fecha_hasta'],
                 'deposits' => $deposits,
                 'defaultCodUbic' => $defaultCodUbic,
                 'csrf_token' => $csrfToken,
@@ -91,9 +98,9 @@ final class ReceptionController
             $codProd = trim((string)($_POST['codprod'] ?? ''));
             $metodo = trim((string)($_POST['metodo_entrada'] ?? 'SOLO_PESO'));
             $codUbic = trim((string)($_POST['codubic'] ?? ''));
-            $tara = (float)($_POST['tara'] ?? 0.0);
-            $pesoBruto = (float)($_POST['peso_bruto'] ?? 0.0);
-            $pesoNeto = (float)($_POST['peso_neto'] ?? 0.0);
+            $tara = round((float)($_POST['tara'] ?? 0.0), 4);
+            $pesoBruto = round((float)($_POST['peso_bruto'] ?? 0.0), 4);
+            $pesoNeto = round((float)($_POST['peso_neto'] ?? 0.0), 4);
             $cantidad = (int)($_POST['cantidad'] ?? 0);
             $observaciones = trim((string)($_POST['observaciones'] ?? ''));
 
@@ -108,7 +115,7 @@ final class ReceptionController
                 }
                 if (is_array($rawList)) {
                     foreach ($rawList as $p) {
-                        $val = (float)$p;
+                        $val = round((float)$p, 4);
                         if ($val > 0) {
                             $pesosIndividuales[] = $val;
                         }

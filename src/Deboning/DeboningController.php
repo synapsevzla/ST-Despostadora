@@ -18,22 +18,60 @@ final class DeboningController
         $user = AuthController::checkAuth();
 
         try {
+            $fechaDesde = !empty($_GET['fecha_desde']) ? trim((string)$_GET['fecha_desde']) : null;
+            $fechaHasta = !empty($_GET['fecha_hasta']) ? trim((string)$_GET['fecha_hasta']) : null;
+            $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+
             $species = ConfigService::getSpeciesList();
             $activeOrders = DeboningService::getActiveOrders();
+            $ordersPagination = DeboningService::getOrdersPaginated($fechaDesde, $fechaHasta, $page, 10);
             $csrfToken = Security::generateCsrfToken();
 
             View::render('deboning', [
                 'user' => $user,
                 'species' => $species,
                 'activeOrders' => $activeOrders,
+                'orders' => $ordersPagination['items'],
+                'pagination' => $ordersPagination,
+                'fechaDesde' => $ordersPagination['fecha_desde'],
+                'fechaHasta' => $ordersPagination['fecha_hasta'],
                 'csrf_token' => $csrfToken,
-                'activeNav' => 'desposte',
+                'activeNav' => 'deboning',
                 'title' => 'Líneas de Desposte - ST Despostadora'
             ]);
         } catch (Throwable $e) {
             error_log('[DEBONING INDEX ERROR] ' . $e->getMessage());
             http_response_code(500);
             echo "Error cargando módulo de desposte: " . htmlspecialchars($e->getMessage());
+        }
+    }
+
+    /**
+     * Muestra la página completa e independiente para abrir una nueva orden de desposte.
+     */
+    public static function nueva(): void
+    {
+        $user = AuthController::checkAuth();
+
+        try {
+            $species = ConfigService::getSpeciesList();
+            $mesas = ConfigService::getMesas(true);
+            $nextCorrelativo = CorrelativeService::previewNext('DESPOSTE');
+            $csrfToken = Security::generateCsrfToken();
+
+            View::render('desposte_nueva', [
+                'user' => $user,
+                'species' => $species,
+                'mesas' => $mesas,
+                'nextCorrelativo' => $nextCorrelativo,
+                'csrf_token' => $csrfToken,
+                'activeNav' => 'deboning',
+                'title' => 'Nueva Orden de Desposte - ST Despostadora'
+            ]);
+        } catch (Throwable $e) {
+            error_log('[DEBONING NUEVA ERROR] ' . $e->getMessage());
+            http_response_code(500);
+            echo "Error cargando formulario de desposte: " . htmlspecialchars($e->getMessage());
         }
     }
 
@@ -53,10 +91,22 @@ final class DeboningController
 
         try {
             $nroRecepcion = trim((string)($_POST['nro_recepcion'] ?? ''));
-            $lineaMesa = trim((string)($_POST['linea_mesa'] ?? 'Mesa 1'));
+            $lineaMesa = trim((string)($_POST['linea_mesa'] ?? ''));
             $nroEspecie = isset($_POST['nro_especie']) && $_POST['nro_especie'] !== '' ? (int)$_POST['nro_especie'] : null;
-            $pesoEntrada = isset($_POST['peso_entrada']) ? (float)$_POST['peso_entrada'] : 0.0;
+            $pesoEntrada = isset($_POST['peso_entrada']) ? round((float)$_POST['peso_entrada'], 4) : 0.0;
             $observaciones = trim((string)($_POST['observaciones'] ?? ''));
+
+            // Validar mesa: solo es necesaria cuando existen mesas configuradas
+            $activeMesas = ConfigService::getMesas(true);
+            if (!empty($activeMesas)) {
+                if ($lineaMesa === '') {
+                    echo json_encode(['success' => false, 'error' => 'Debe seleccionar o indicar una mesa de trabajo operativa configurada.']);
+                    return;
+                }
+            } else {
+                // Si no existen o no hay creadas, su uso no es necesario
+                $lineaMesa = '';
+            }
 
             $nroOrden = DeboningService::openOrder([
                 'nro_recepcion' => $nroRecepcion,
@@ -93,7 +143,7 @@ final class DeboningController
         try {
             $nroOrden = trim((string)($_POST['nro_orden'] ?? ''));
             $codProdCorte = trim((string)($_POST['codprod_corte'] ?? ''));
-            $pesoNeto = (float)($_POST['peso_neto'] ?? 0.0);
+            $pesoNeto = round((float)($_POST['peso_neto'] ?? 0.0), 4);
 
             $result = DeboningService::weighCut([
                 'nro_orden' => $nroOrden,

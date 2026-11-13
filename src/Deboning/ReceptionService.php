@@ -232,6 +232,119 @@ final class ReceptionService
     }
 
     /**
+     * Obtiene el listado de recepciones registradas de forma paginada y filtrada por fecha.
+     *
+     * @param string|null $fechaDesde Fecha inicial YYYY-MM-DD
+     * @param string|null $fechaHasta Fecha final YYYY-MM-DD
+     * @param int $page Número de página actual
+     * @param int $perPage Cantidad de registros por página
+     * @param string|null $estado Filtro opcional por estado
+     * @return array{items: list<array<string, mixed>>, total: int, page: int, per_page: int, total_pages: int, fecha_desde: ?string, fecha_hasta: ?string}
+     */
+    public static function getReceptionsPaginated(
+        ?string $fechaDesde = null,
+        ?string $fechaHasta = null,
+        int $page = 1,
+        int $perPage = 10,
+        ?string $estado = null
+    ): array {
+        $pdo = Database::getConnection();
+
+        $where = [];
+        $params = [];
+
+        $cleanDesde = null;
+        if ($fechaDesde !== null && trim($fechaDesde) !== '') {
+            $d = \DateTime::createFromFormat('Y-m-d', trim($fechaDesde));
+            if ($d && $d->format('Y-m-d') === trim($fechaDesde)) {
+                $cleanDesde = trim($fechaDesde);
+                $where[] = "CAST(r.FechaHora AS DATE) >= :fdesde";
+                $params[':fdesde'] = $cleanDesde;
+            }
+        }
+
+        $cleanHasta = null;
+        if ($fechaHasta !== null && trim($fechaHasta) !== '') {
+            $d = \DateTime::createFromFormat('Y-m-d', trim($fechaHasta));
+            if ($d && $d->format('Y-m-d') === trim($fechaHasta)) {
+                $cleanHasta = trim($fechaHasta);
+                $where[] = "CAST(r.FechaHora AS DATE) <= :fhasta";
+                $params[':fhasta'] = $cleanHasta;
+            }
+        }
+
+        if ($estado !== null && trim($estado) !== '') {
+            $where[] = "r.Estado = :estado";
+            $params[':estado'] = trim($estado);
+        }
+
+        $whereSql = !empty($where) ? (' WHERE ' . implode(' AND ', $where)) : '';
+
+        // 1. Contar total de registros
+        $countSql = "SELECT COUNT(1) AS Total FROM ST_Despostadora_Recepciones r" . $whereSql;
+        $countStmt = $pdo->prepare($countSql);
+        foreach ($params as $param => $val) {
+            $countStmt->bindValue($param, $val, PDO::PARAM_STR);
+        }
+        $countStmt->execute();
+        $total = (int)($countStmt->fetch(PDO::FETCH_ASSOC)['Total'] ?? 0);
+
+        // 2. Calcular límites de paginación
+        $perPage = max(1, $perPage);
+        $totalPages = (int)ceil($total / $perPage);
+        if ($totalPages < 1) {
+            $totalPages = 1;
+        }
+        $page = max(1, min($page, $totalPages));
+        $offset = ($page - 1) * $perPage;
+
+        // 3. Obtener registros paginados
+        $dataSql = "SELECT 
+                        r.NroRecepcion,
+                        r.FechaHora,
+                        r.CodUsua,
+                        r.CodUbic,
+                        r.CodProdCanal,
+                        LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal,
+                        p.Unidad,
+                        CAST(r.CostActCanal AS FLOAT) AS CostActCanal,
+                        r.MetodoEntrada,
+                        r.CantidadEspecies,
+                        CAST(r.PesoTotalBruto AS FLOAT) AS PesoTotalBruto,
+                        CAST(r.TaraTotal AS FLOAT) AS TaraTotal,
+                        CAST(r.PesoTotalNeto AS FLOAT) AS PesoTotalNeto,
+                        CAST(r.CostoTotalNeto AS FLOAT) AS CostoTotalNeto,
+                        CAST(r.PesoDisponible AS FLOAT) AS PesoDisponible,
+                        r.Estado,
+                        r.Observaciones
+                    FROM ST_Despostadora_Recepciones r
+                    INNER JOIN SAPROD p ON p.CodProd = r.CodProdCanal
+                    {$whereSql}
+                    ORDER BY r.FechaHora DESC
+                    OFFSET :offset ROWS
+                    FETCH NEXT :limit ROWS ONLY";
+
+        $dataStmt = $pdo->prepare($dataSql);
+        foreach ($params as $param => $val) {
+            $dataStmt->bindValue($param, $val, PDO::PARAM_STR);
+        }
+        $dataStmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $dataStmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $dataStmt->execute();
+        $items = $dataStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'items' => $items,
+            'total' => $total,
+            'page' => $page,
+            'per_page' => $perPage,
+            'total_pages' => $totalPages,
+            'fecha_desde' => $cleanDesde,
+            'fecha_hasta' => $cleanHasta,
+        ];
+    }
+
+    /**
      * Obtiene el detalle de piezas individuales para una recepción.
      * @return list<array<string, mixed>>
      */

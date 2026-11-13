@@ -427,4 +427,127 @@ final class ConfigService
             'CodProdCorte' => $codProdCorte
         ]);
     }
+
+    /**
+     * Obtiene el listado de mesas o líneas operativas configuradas.
+     * @return list<array{ID: int, Nombre: string, Descripcion: ?string, Activo: int, FechaRegistro: string}>
+     */
+    public static function getMesas(bool $onlyActive = false): array
+    {
+        $pdo = Database::getConnection();
+        try {
+            $sql = "SELECT ID, Nombre, Descripcion, Activo, FechaRegistro FROM ST_Despostadora_Mesas";
+            if ($onlyActive) {
+                $sql .= " WHERE Activo = 1";
+            }
+            $sql .= " ORDER BY Nombre ASC";
+            $stmt = $pdo->query($sql);
+            return $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
+    /**
+     * Registra o actualiza una mesa o línea de desposte.
+     */
+    public static function saveMesa(?int $id, string $nombre, ?string $descripcion, int $activo, string $codusua): void
+    {
+        $nombre = trim($nombre);
+        $descripcion = $descripcion !== null ? trim($descripcion) : null;
+
+        if ($nombre === '') {
+            throw new RuntimeException("El identificador o nombre de la mesa es requerido.");
+        }
+
+        $pdo = Database::getConnection();
+
+        // Validar unicidad del nombre
+        if ($id !== null && $id > 0) {
+            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM ST_Despostadora_Mesas WHERE Nombre = :nombre AND ID != :id");
+            $stmtCheck->bindValue(':id', $id, PDO::PARAM_INT);
+        } else {
+            $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM ST_Despostadora_Mesas WHERE Nombre = :nombre");
+        }
+        $stmtCheck->bindValue(':nombre', $nombre, PDO::PARAM_STR);
+        $stmtCheck->execute();
+        if ((int)$stmtCheck->fetchColumn() > 0) {
+            throw new RuntimeException("Ya existe una mesa o línea configurada con el nombre '{$nombre}'.");
+        }
+
+        if ($id !== null && $id > 0) {
+            $stmt = $pdo->prepare("UPDATE ST_Despostadora_Mesas 
+                                   SET Nombre = :nombre, Descripcion = :desc, Activo = :activo 
+                                   WHERE ID = :id");
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $action = 'EDITAR_MESA';
+        } else {
+            $stmt = $pdo->prepare("INSERT INTO ST_Despostadora_Mesas (Nombre, Descripcion, Activo, FechaRegistro) 
+                                   VALUES (:nombre, :desc, :activo, SYSUTCDATETIME())");
+            $action = 'CREAR_MESA';
+        }
+
+        $stmt->bindValue(':nombre', $nombre, PDO::PARAM_STR);
+        $stmt->bindValue(':desc', $descripcion !== '' ? $descripcion : null, $descripcion !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':activo', $activo === 1 ? 1 : 0, PDO::PARAM_INT);
+        $stmt->execute();
+
+        AuditService::log('CONFIGURACION', $nombre, $action, $codusua, [
+            'id' => $id,
+            'nombre' => $nombre,
+            'descripcion' => $descripcion,
+            'activo' => $activo
+        ]);
+    }
+
+    /**
+     * Alterna el estado activo/inactivo de una mesa.
+     */
+    public static function toggleMesaStatus(int $id, int $activo, string $codusua): void
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare("UPDATE ST_Despostadora_Mesas SET Activo = :activo WHERE ID = :id");
+        $stmt->bindValue(':activo', $activo === 1 ? 1 : 0, PDO::PARAM_INT);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        AuditService::log('CONFIGURACION', (string)$id, 'CAMBIAR_ESTADO_MESA', $codusua, [
+            'id' => $id,
+            'nuevo_activo' => $activo === 1 ? 1 : 0
+        ]);
+    }
+
+    /**
+     * Elimina una mesa si no posee órdenes de desposte asociadas.
+     */
+    public static function deleteMesa(int $id, string $codusua): void
+    {
+        $pdo = Database::getConnection();
+        $stmtSel = $pdo->prepare("SELECT Nombre FROM ST_Despostadora_Mesas WHERE ID = :id");
+        $stmtSel->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmtSel->execute();
+        $nombre = $stmtSel->fetchColumn();
+
+        if ($nombre === false) {
+            throw new RuntimeException("La mesa no existe.");
+        }
+
+        $stmtCheck = $pdo->prepare("SELECT COUNT(*) FROM ST_Despostadora_Despostes WHERE LineaMesa = :nombre");
+        $stmtCheck->bindValue(':nombre', (string)$nombre, PDO::PARAM_STR);
+        $stmtCheck->execute();
+        $usos = (int)$stmtCheck->fetchColumn();
+
+        if ($usos > 0) {
+            throw new RuntimeException("No se puede eliminar la mesa '{$nombre}' porque está vinculada a {$usos} orden(es) de desposte. Puede inactivarla en su lugar.");
+        }
+
+        $stmtDel = $pdo->prepare("DELETE FROM ST_Despostadora_Mesas WHERE ID = :id");
+        $stmtDel->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmtDel->execute();
+
+        AuditService::log('CONFIGURACION', (string)$nombre, 'ELIMINAR_MESA', $codusua, [
+            'id' => $id,
+            'nombre' => $nombre
+        ]);
+    }
 }

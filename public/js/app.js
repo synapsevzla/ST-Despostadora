@@ -5,6 +5,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
     initClock();
+    initDecimalInputs();
 });
 
 function initClock() {
@@ -123,4 +124,64 @@ function initSidebar() {
     if (!sidebar.classList.contains('collapsed')) {
         resetAutoHideTimer();
     }
+}
+
+/**
+ * Control global para campos decimales:
+ * - Restringe la entrada a máximo 4 decimales en tiempo real (teclado, pegado o input).
+ * - Aplica a todos los inputs numéricos con step decimal o clase decimal-input.
+ */
+function initDecimalInputs() {
+    const isDecimalInput = (el) => {
+        if (!el || el.tagName !== 'INPUT') return false;
+        if (el.classList && el.classList.contains('decimal-input')) return true;
+        if (el.type === 'number') {
+            const step = el.getAttribute('step');
+            return step && (step === 'any' || step.includes('.') || parseFloat(step) < 1);
+        }
+        return false;
+    };
+
+    // Control al escribir o pegar
+    document.addEventListener('input', (e) => {
+        const target = e.target;
+        if (!isDecimalInput(target)) return;
+
+        let val = target.value;
+        if (val && val.includes('.')) {
+            const parts = val.split('.');
+            if (parts[1] && parts[1].length > 4) {
+                target.value = parts[0] + '.' + parts[1].substring(0, 4);
+            }
+        }
+    });
+
+    // Control preventivo en keydown
+    document.addEventListener('keydown', (e) => {
+        const target = e.target;
+        if (!isDecimalInput(target)) return;
+
+        // Permitir teclas especiales y atajos
+        if (['Backspace', 'Tab', 'Enter', 'Escape', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Delete', 'Home', 'End'].includes(e.key) ||
+            e.ctrlKey || e.metaKey || e.altKey) {
+            return;
+        }
+
+        // Si se presiona un número y el cursor está después del punto
+        if (/^[0-9]$/.test(e.key)) {
+            const val = target.value;
+            const dotIndex = val.indexOf('.');
+            if (dotIndex !== -1) {
+                const selStart = target.selectionStart;
+                const selEnd = target.selectionEnd;
+                // Si no hay texto seleccionado para sobrescribir y estamos tras el punto decimal
+                if (selStart !== null && selStart === selEnd && selStart > dotIndex) {
+                    const decimals = val.slice(dotIndex + 1);
+                    if (decimals.length >= 4) {
+                        e.preventDefault();
+                    }
+                }
+            }
+        }
+    });
 }

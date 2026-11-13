@@ -20,10 +20,10 @@ ob_start();
             <svg class="icon" viewBox="0 0 24 24" style="width:16px; height:16px; margin-right:6px;"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
             Tablero de Mesas (<span id="countActiveOrders"><?= count($activeOrders) ?></span>)
         </button>
-        <button type="button" class="btn btn-primary" id="btnOpenNewOrderTop" data-action="open-new-order">
+        <a href="/desposte/nueva" class="btn btn-primary" id="btnOpenNewOrderTop">
             <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; margin-right:6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             Nueva Orden de Desposte
-        </button>
+        </a>
     </div>
 </div>
 
@@ -49,9 +49,9 @@ ob_start();
                 <p style="color:var(--text-secondary); max-width:450px; margin:0 auto 1.5rem auto; font-size:0.9rem;">
                     Inicie una nueva orden asignando una mesa y una canal de recepción para comenzar el pesaje y desglose de cortes.
                 </p>
-                <button type="button" class="btn btn-primary" data-action="open-new-order">
+                <a href="/desposte/nueva" class="btn btn-primary">
                     Iniciar Primera Orden
-                </button>
+                </a>
             </div>
         <?php else: ?>
             <?php foreach ($activeOrders as $ord): ?>
@@ -59,9 +59,11 @@ ob_start();
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
                             <div>
-                                <span class="badge" style="background:#55433a; color:var(--primary); font-weight:700; font-size:0.8rem;">
-                                    <?= Security::escape($ord['LineaMesa']) ?>
-                                </span>
+                                <?php if (!empty(trim((string)$ord['LineaMesa']))): ?>
+                                    <span class="badge" style="background:#55433a; color:var(--primary); font-weight:700; font-size:0.8rem;">
+                                        <?= Security::escape($ord['LineaMesa']) ?>
+                                    </span>
+                                <?php endif; ?>
                                 <h3 style="font-size:1.05rem; font-weight:700; margin-top:0.35rem; color:var(--text-primary);">
                                     <?= Security::escape($ord['NroOrdenDesposte']) ?>
                                 </h3>
@@ -104,6 +106,206 @@ ob_start();
             <?php endforeach; ?>
         <?php endif; ?>
     </div>
+
+    <!-- SECCIÓN: Historial y Registro de Órdenes de Desposte -->
+    <div class="card" style="margin-top: 1.5rem;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+            <div>
+                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 600; color: var(--text-primary);">
+                    Historial de Órdenes de Desposte
+                </h3>
+                <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+                    Registro histórico y trazabilidad de despostes finalizados y en proceso.
+                </p>
+            </div>
+            <span style="font-size: 0.85rem; color: var(--text-muted); font-weight: 400;">
+                Total: <strong><?= $pagination['total'] ?? count($orders ?? []) ?></strong> órdenes
+                <?php if (!empty($fechaDesde) || !empty($fechaHasta)): ?>
+                    <span style="color: var(--primary); margin-left: 0.25rem;">(filtrado)</span>
+                <?php endif; ?>
+            </span>
+        </div>
+
+        <!-- Barra de Búsqueda por Rango de Fecha -->
+        <form method="GET" action="/deboning" class="filter-bar">
+            <div class="filter-group">
+                <svg class="icon" viewBox="0 0 24 24" style="color: var(--primary); width: 16px; height: 16px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                <label for="desp_fecha_desde" class="filter-label">Desde:</label>
+                <input type="date" id="desp_fecha_desde" name="fecha_desde" class="filter-input" value="<?= Security::escape($fechaDesde ?? '') ?>">
+                <label for="desp_fecha_hasta" class="filter-label" style="margin-left: 0.25rem;">Hasta:</label>
+                <input type="date" id="desp_fecha_hasta" name="fecha_hasta" class="filter-input" value="<?= Security::escape($fechaHasta ?? '') ?>">
+                <button type="submit" class="btn btn-primary" style="padding: 0.45rem 0.9rem; font-size: 0.85rem; width: auto; min-width: auto;">
+                    <svg class="icon" viewBox="0 0 24 24" style="width: 14px; height: 14px; margin-right: 4px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    Filtrar
+                </button>
+                <?php if (!empty($fechaDesde) || !empty($fechaHasta)): ?>
+                    <a href="/deboning" class="btn btn-outline" style="padding: 0.45rem 0.8rem; font-size: 0.85rem; width: auto; text-decoration: none;">
+                        Limpiar
+                    </a>
+                <?php endif; ?>
+            </div>
+            <?php if (!empty($fechaDesde) || !empty($fechaHasta)): ?>
+                <div style="font-size: 0.8rem; color: var(--accent);">
+                    Rango: <?= Security::escape($fechaDesde ?: 'Inicio') ?> al <?= Security::escape($fechaHasta ?: 'Hoy') ?>
+                </div>
+            <?php endif; ?>
+        </form>
+
+        <?php if (empty($orders)): ?>
+            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-muted);">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 44px; height: 44px; stroke: var(--border-color); margin-bottom: 0.75rem;">
+                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <p style="font-size: 0.95rem; margin-bottom: 0.5rem;">
+                    <?= (!empty($fechaDesde) || !empty($fechaHasta)) ? 'No se encontraron órdenes de desposte en el rango de fechas seleccionado.' : 'No hay órdenes de desposte registradas.' ?>
+                </p>
+                <?php if (!empty($fechaDesde) || !empty($fechaHasta)): ?>
+                    <a href="/deboning" class="btn btn-outline" style="width: auto; margin-top: 0.5rem; text-decoration: none;">
+                        Ver Todas las Órdenes
+                    </a>
+                <?php endif; ?>
+            </div>
+        <?php else: ?>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
+                            <th style="padding: 0.75rem 0.5rem;">N° Orden</th>
+                            <th style="padding: 0.75rem 0.5rem;">Mesa</th>
+                            <th style="padding: 0.75rem 0.5rem;">Fecha Inicio</th>
+                            <th style="padding: 0.75rem 0.5rem;">Especie / Canal</th>
+                            <th style="padding: 0.75rem 0.5rem;">Recepción</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: right;">Canal (kg)</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: right;">Cortes (kg)</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: right;">Rend. %</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: right;">Merma %</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: center;">Estado</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: center;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($orders as $o): ?>
+                            <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.2s;">
+                                <td style="padding: 0.75rem 0.5rem; font-family: monospace; font-weight: 700; color: var(--primary);">
+                                    <?= Security::escape($o['NroOrdenDesposte']) ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem;">
+                                    <?php if (!empty(trim((string)$o['LineaMesa']))): ?>
+                                        <span class="badge" style="background: #55433a; color: var(--text-primary); font-size: 0.75rem;">
+                                            <?= Security::escape($o['LineaMesa']) ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; color: var(--text-secondary); font-size: 0.8rem; white-space: nowrap;">
+                                    <?= Security::escape(substr((string)$o['FechaHoraInicio'], 0, 16)) ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem;">
+                                    <strong style="color: var(--text-primary);"><?= Security::escape($o['NombreCanal']) ?></strong>
+                                    <span style="font-size: 0.75rem; color: var(--text-muted); display: block;">[<?= Security::escape($o['CodProdCanal']) ?>]</span>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; font-family: monospace; font-size: 0.8rem; color: var(--text-secondary);">
+                                    <?= Security::escape($o['NroRecepcion']) ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: right; font-weight: 600; color: var(--text-primary);">
+                                    <?= number_format((float)$o['PesoCanalEntrada'], 2) ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: right; font-weight: 700; color: var(--primary);">
+                                    <?= number_format((float)$o['PesoTotalCortes'], 2) ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: right; font-weight: 600; color: var(--success);">
+                                    <?= number_format((float)$o['RendimientoPct'], 2) ?>%
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: right; font-weight: 600; color: var(--danger);">
+                                    <?= number_format((float)$o['MermaPct'], 2) ?>%
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                                    <?php if ($o['Estado'] === 'EN_PROCESO'): ?>
+                                        <span class="badge badge-success">EN PROCESO</span>
+                                    <?php elseif ($o['Estado'] === 'FINALIZADO'): ?>
+                                        <span class="badge" style="background: rgba(193, 218, 198, 0.15); color: var(--success); border: 1px solid rgba(193, 218, 198, 0.3);">FINALIZADO</span>
+                                    <?php else: ?>
+                                        <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); border: 1px solid var(--border-color);"><?= Security::escape($o['Estado']) ?></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                                    <?php if ($o['Estado'] === 'EN_PROCESO'): ?>
+                                        <button type="button" class="btn btn-primary btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
+                                            Operar Mesa
+                                        </button>
+                                    <?php else: ?>
+                                        <button type="button" class="btn btn-outline btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
+                                            Ver Balance
+                                        </button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Controles de Paginación de Desposte -->
+            <?php if (isset($pagination) && $pagination['total_pages'] > 1): ?>
+                <?php
+                $queryParams = [];
+                if (!empty($fechaDesde)) $queryParams['fecha_desde'] = $fechaDesde;
+                if (!empty($fechaHasta)) $queryParams['fecha_hasta'] = $fechaHasta;
+
+                $makeDespUrl = function(int $p) use ($queryParams): string {
+                    $params = $queryParams;
+                    $params['page'] = $p;
+                    return '/deboning?' . http_build_query($params);
+                };
+
+                $curPage = $pagination['page'];
+                $totPages = $pagination['total_pages'];
+                ?>
+                <div class="pagination-wrapper">
+                    <div class="pagination-info">
+                        Página <strong><?= $curPage ?></strong> de <strong><?= $totPages ?></strong> (Total: <strong><?= $pagination['total'] ?></strong> órdenes)
+                    </div>
+                    <div class="pagination">
+                        <?php if ($curPage > 1): ?>
+                            <a href="<?= $makeDespUrl($curPage - 1) ?>" class="page-btn">« Anterior</a>
+                        <?php else: ?>
+                            <span class="page-btn disabled">« Anterior</span>
+                        <?php endif; ?>
+
+                        <?php
+                        $startPage = max(1, $curPage - 2);
+                        $endPage = min($totPages, $curPage + 2);
+
+                        if ($startPage > 1) {
+                            echo '<a href="' . $makeDespUrl(1) . '" class="page-btn">1</a>';
+                            if ($startPage > 2) echo '<span class="page-btn disabled">...</span>';
+                        }
+
+                        for ($i = $startPage; $i <= $endPage; $i++) {
+                            if ($i === $curPage) {
+                                echo '<span class="page-btn active">' . $i . '</span>';
+                            } else {
+                                echo '<a href="' . $makeDespUrl($i) . '" class="page-btn">' . $i . '</a>';
+                            }
+                        }
+
+                        if ($endPage < $totPages) {
+                            if ($endPage < $totPages - 1) echo '<span class="page-btn disabled">...</span>';
+                            echo '<a href="' . $makeDespUrl($totPages) . '" class="page-btn">' . $totPages . '</a>';
+                        }
+                        ?>
+
+                        <?php if ($curPage < $totPages): ?>
+                            <a href="<?= $makeDespUrl($curPage + 1) ?>" class="page-btn">Siguiente »</a>
+                        <?php else: ?>
+                            <span class="page-btn disabled">Siguiente »</span>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+        <?php endif; ?>
+    </div>
 </div>
 
 <!-- VISTA 2: ESTACIÓN TÁCTIL DE PESAJE Y COSTEO -->
@@ -112,7 +314,7 @@ ob_start();
     <div class="card" style="margin-bottom:1.25rem; padding:1rem 1.25rem; background:linear-gradient(135deg, #43342d 0%, #4e3d36 100%);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
             <div>
-                <span class="badge" id="stationMesaBadge" style="background:var(--primary); color:#fff; font-weight:700; font-size:0.85rem;">Mesa 1</span>
+                <span class="badge" id="stationMesaBadge" style="background:var(--primary); color:#fff; font-weight:700; font-size:0.85rem; display:none;"></span>
                 <span style="font-size:1.15rem; font-weight:700; margin-left:0.5rem; color:var(--text-primary);" id="stationOrderTitle">DESP-0000000000000001</span>
                 <span style="font-size:0.9rem; color:var(--text-secondary); margin-left:0.75rem;" id="stationCanalSubtitle">Novillo Especial (CARNEC)</span>
             </div>
@@ -190,7 +392,7 @@ ob_start();
             </h3>
 
             <div style="position:relative; margin-bottom:0.75rem;">
-                <input type="number" step="0.001" id="weighInput" class="form-control" style="font-size:2rem; font-weight:800; text-align:right; padding:0.75rem 3.5rem 0.75rem 1rem; height:auto; color:var(--text-primary); background:#271e1a;" placeholder="0.000">
+                <input type="number" step="0.0001" id="weighInput" class="form-control" style="font-size:2rem; font-weight:800; text-align:right; padding:0.75rem 3.5rem 0.75rem 1rem; height:auto; color:var(--text-primary); background:#271e1a;" placeholder="0.0000">
                 <span style="position:absolute; right:1.25rem; top:50%; transform:translateY(-50%); font-size:1.2rem; font-weight:700; color:var(--text-secondary);">kg</span>
             </div>
 
@@ -254,87 +456,6 @@ ob_start();
                 </table>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- MODAL: APERTURA DE NUEVA ORDEN DE DESPOSTE -->
-<div id="modalNewOrder" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(20,15,12,0.8); z-index:100; align-items:center; justify-content:center; padding:1.5rem; backdrop-filter:blur(3px);">
-    <div class="card" style="width:100%; max-width:580px; max-height:90vh; overflow-y:auto; position:relative; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
-            <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin:0;">
-                Abrir Nueva Orden de Desposte
-            </h2>
-            <button type="button" class="btn-close" data-action="close-new-order" style="background:transparent; border:none; color:var(--text-secondary); cursor:pointer; font-size:1.4rem;">&times;</button>
-        </div>
-
-        <form id="formNewOrder">
-            <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token) ?>">
-
-            <!-- Línea / Mesa de Trabajo -->
-            <div class="form-group" style="margin-bottom:1rem;">
-                <label class="form-label" style="display:block; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.35rem;">Línea / Mesa Operativa:</label>
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:0.5rem; margin-bottom:0.5rem;">
-                    <button type="button" class="btn btn-secondary mesa-select-btn active" data-mesa="Mesa 1">Mesa 1</button>
-                    <button type="button" class="btn btn-secondary mesa-select-btn" data-mesa="Mesa 2">Mesa 2</button>
-                    <button type="button" class="btn btn-secondary mesa-select-btn" data-mesa="Mesa 3">Mesa 3</button>
-                    <button type="button" class="btn btn-secondary mesa-select-btn" data-mesa="Línea A">Línea A</button>
-                </div>
-                <input type="text" name="linea_mesa" id="inputLineaMesa" class="form-control" value="Mesa 1" required style="font-weight:600;">
-            </div>
-
-            <!-- Especie / Canal -->
-            <div class="form-group" style="margin-bottom:1rem;">
-                <label class="form-label" style="display:block; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.35rem;">Especie / Tipo de Canal:</label>
-                <select name="codprod_canal" id="selectCanalEspecie" class="form-control" required>
-                    <option value="">-- Seleccione una especie configurada --</option>
-                    <?php foreach ($species as $sp): 
-                        $cCanal = (string)($sp['CodProdCanal'] ?? $sp['CodProd'] ?? '');
-                        $nCanal = (string)($sp['NombreCanal'] ?? $sp['NombreEspecie'] ?? $cCanal);
-                    ?>
-                        <option value="<?= Security::escape($cCanal) ?>">
-                            <?= Security::escape($nCanal) ?> (<?= Security::escape($cCanal) ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <!-- Recepción de Origen -->
-            <div class="form-group" style="margin-bottom:1rem;">
-                <label class="form-label" style="display:block; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.35rem;">Recepción de Canal con Peso Disponible:</label>
-                <select name="nro_recepcion" id="selectRecepcion" class="form-control" required>
-                    <option value="">-- Seleccione primero una especie --</option>
-                </select>
-                <small id="recAvailableHelp" style="color:var(--text-muted); font-size:0.8rem; margin-top:4px; display:block;"></small>
-            </div>
-
-            <!-- Selección de Pieza Individual (si aplica Método 3) -->
-            <div class="form-group" id="grpPiezaIndividual" style="display:none; margin-bottom:1rem; background:rgba(0,0,0,0.15); padding:0.75rem; border-radius:8px;">
-                <label class="form-label" style="display:block; font-size:0.85rem; color:var(--primary); font-weight:600; margin-bottom:0.35rem;">
-                    Res / Pieza Individual a Despostar:
-                </label>
-                <select name="nro_especie" id="selectPiezaIndividual" class="form-control">
-                    <option value="">-- Seleccione la res individual --</option>
-                </select>
-            </div>
-
-            <!-- Peso a Procesar -->
-            <div class="form-group" style="margin-bottom:1.25rem;">
-                <label class="form-label" style="display:block; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.35rem;">Peso de Canal para la Orden (kg):</label>
-                <input type="number" step="0.001" name="peso_entrada" id="inputPesoEntrada" class="form-control" style="font-size:1.2rem; font-weight:700;" placeholder="0.000" required>
-            </div>
-
-            <div class="form-group" style="margin-bottom:1.5rem;">
-                <label class="form-label" style="display:block; font-size:0.85rem; color:var(--text-secondary); margin-bottom:0.35rem;">Observaciones (Opcional):</label>
-                <input type="text" name="observaciones" class="form-control" placeholder="Ej. Lote de reses de engorde lote #42">
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
-                <button type="button" class="btn btn-outline" data-action="close-new-order">Cancelar</button>
-                <button type="submit" class="btn btn-primary" id="btnSubmitNewOrder">
-                    Abrir Orden e Iniciar Pesaje
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 

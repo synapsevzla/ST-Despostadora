@@ -16,8 +16,11 @@ require_once __DIR__ . '/../src/Deboning/ConfigController.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionService.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionController.php';
 require_once __DIR__ . '/../src/Deboning/YieldCalculator.php';
+require_once __DIR__ . '/../src/Deboning/DeboningQueryService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningController.php';
+require_once __DIR__ . '/../src/Deboning/DashboardService.php';
+require_once __DIR__ . '/../src/Deboning/DashboardController.php';
 
 use Config\Database;
 use Config\Security;
@@ -26,6 +29,7 @@ use Src\Auth\AuthController;
 use Src\Deboning\ConfigController;
 use Src\Deboning\ReceptionController;
 use Src\Deboning\DeboningController;
+use Src\Deboning\DashboardController;
 use Src\Utils\View;
 
 // Iniciar sesión segura y cabeceras HTTP
@@ -61,10 +65,7 @@ switch ($requestUri) {
         break;
 
     case '/':
-        $user = AuthController::checkAuth();
-        View::render('home', [
-            'user' => $user
-        ]);
+        DashboardController::index();
         break;
 
     case '/configuracion':
@@ -127,9 +128,36 @@ switch ($requestUri) {
         }
         break;
 
+    case '/api/config/mesas':
+        ConfigController::getMesas();
+        break;
+
+    case '/api/config/mesas/guardar':
+        if ($requestMethod === 'POST') {
+            ConfigController::saveMesa();
+        }
+        break;
+
+    case '/api/config/mesas/estado':
+        if ($requestMethod === 'POST') {
+            ConfigController::toggleMesaStatus();
+        }
+        break;
+
+    case '/api/config/mesas/eliminar':
+        if ($requestMethod === 'POST') {
+            ConfigController::deleteMesa();
+        }
+        break;
+
     case '/desposte':
     case '/deboning':
         DeboningController::index();
+        break;
+
+    case '/desposte/nueva':
+    case '/deboning/nueva':
+        DeboningController::nueva();
         break;
 
     case '/api/desposte/abrir':
@@ -166,6 +194,10 @@ switch ($requestUri) {
 
     case '/api/desposte/activas':
         DeboningController::active();
+        break;
+
+    case '/api/dashboard/kpis':
+        DashboardController::apiSummary();
         break;
 
     default:

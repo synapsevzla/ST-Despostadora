@@ -67,138 +67,13 @@ function pressKeypad(key) {
     } else if (key === '.') {
         if (!input.value.includes('.')) input.value = (input.value === '') ? '0.' : input.value + '.';
     } else {
+        if (input.value.includes('.')) {
+            const decimals = input.value.split('.')[1] || '';
+            if (decimals.length >= 4) return; // Máximo 4 decimales
+        }
         input.value += key;
     }
     input.focus();
-}
-
-function openNewOrderModal() {
-    const modal = document.getElementById('modalNewOrder');
-    if (modal) modal.style.display = 'flex';
-}
-
-function closeNewOrderModal() {
-    const modal = document.getElementById('modalNewOrder');
-    if (modal) modal.style.display = 'none';
-}
-
-function selectMesa(btn, mesaName) {
-    document.querySelectorAll('.mesa-select-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const input = document.getElementById('inputLineaMesa');
-    if (input) input.value = mesaName;
-}
-
-async function onEspecieChange(canal) {
-    const recSelect = document.getElementById('selectRecepcion');
-    const grpPieza = document.getElementById('grpPiezaIndividual');
-    const help = document.getElementById('recAvailableHelp');
-
-    recSelect.innerHTML = '<option value="">-- Cargando recepciones disponibles... --</option>';
-    grpPieza.style.display = 'none';
-    help.textContent = '';
-    if (!canal) {
-        recSelect.innerHTML = '<option value="">-- Seleccione primero una especie --</option>';
-        return;
-    }
-
-    try {
-        const res = await fetch(`/api/desposte/recepciones-disponibles?canal=${encodeURIComponent(canal)}`);
-        const json = await res.json();
-        if (json.success && json.receptions.length > 0) {
-            recSelect.innerHTML = '<option value="">-- Seleccione una recepción --</option>';
-            json.receptions.forEach(r => {
-                const opt = document.createElement('option');
-                opt.value = r.NroRecepcion;
-                opt.dataset.metodo = r.MetodoEntrada;
-                opt.dataset.disp = r.PesoDisponible;
-                opt.textContent = `${r.NroRecepcion} (${r.MetodoEntrada}) - Disp: ${parseFloat(r.PesoDisponible).toFixed(2)} kg - ${r.FechaHora.substring(0, 16)}`;
-                recSelect.appendChild(opt);
-            });
-            help.textContent = `${json.receptions.length} recepción(es) encontrada(s).`;
-        } else {
-            recSelect.innerHTML = '<option value="">-- Sin recepciones disponibles --</option>';
-            help.textContent = 'Debe registrar primero una recepción de esta especie.';
-        }
-    } catch (e) {
-        recSelect.innerHTML = '<option value="">-- Error cargando recepciones --</option>';
-    }
-}
-
-async function onRecepcionChange(nroRec) {
-    const recSelect = document.getElementById('selectRecepcion');
-    const selectedOpt = recSelect.options[recSelect.selectedIndex];
-    const grpPieza = document.getElementById('grpPiezaIndividual');
-    const piezaSelect = document.getElementById('selectPiezaIndividual');
-    const inputPeso = document.getElementById('inputPesoEntrada');
-
-    grpPieza.style.display = 'none';
-    piezaSelect.innerHTML = '<option value="">-- Seleccione la res individual --</option>';
-    if (!nroRec || !selectedOpt) return;
-
-    const metodo = selectedOpt.dataset.metodo;
-    const disp = parseFloat(selectedOpt.dataset.disp || '0');
-
-    if (metodo === 'PESO_INDIVIDUAL') {
-        grpPieza.style.display = 'block';
-        try {
-            const res = await fetch(`/api/recepcion/detalle?nrorec=${encodeURIComponent(nroRec)}`);
-            const json = await res.json();
-            if (json.success && json.details) {
-                const disponibles = json.details.filter(d => d.EstadoDesposte === 'DISPONIBLE');
-                if (disponibles.length > 0) {
-                    disponibles.forEach(d => {
-                        const opt = document.createElement('option');
-                        opt.value = d.NroEspecie;
-                        opt.dataset.peso = d.PesoNeto;
-                        opt.textContent = `Res #${d.NroEspecie} - Peso: ${parseFloat(d.PesoNeto).toFixed(2)} kg`;
-                        piezaSelect.appendChild(opt);
-                    });
-                } else {
-                    piezaSelect.innerHTML = '<option value="">-- Todas las piezas ya fueron despostadas --</option>';
-                }
-            }
-        } catch (e) {
-            console.error('Error cargando piezas:', e);
-        }
-    } else {
-        inputPeso.value = disp.toFixed(3);
-    }
-}
-
-function onPiezaChange(select) {
-    const opt = select.options[select.selectedIndex];
-    if (opt && opt.dataset.peso) {
-        document.getElementById('inputPesoEntrada').value = parseFloat(opt.dataset.peso).toFixed(3);
-    }
-}
-
-async function submitNewOrder(e) {
-    e.preventDefault();
-    const btn = document.getElementById('btnSubmitNewOrder');
-    btn.disabled = true;
-    btn.textContent = 'Abriendo orden...';
-    const formData = new FormData(document.getElementById('formNewOrder'));
-
-    try {
-        const res = await fetch('/api/desposte/abrir', { method: 'POST', body: formData });
-        const json = await res.json();
-        if (json.success) {
-            closeNewOrderModal();
-            showAlert(json.message, 'success');
-            playBeep('success');
-            loadOrderInStation(json.nro_orden);
-        } else {
-            showAlert(json.error || 'Error abriendo orden', 'danger');
-            playBeep('error');
-        }
-    } catch (e) {
-        showAlert('Error de comunicación', 'danger');
-        playBeep('error');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'Abrir Orden e Iniciar Pesaje';
-    }
 }
 
 async function loadOrderInStation(nroOrden) {
@@ -212,7 +87,15 @@ async function loadOrderInStation(nroOrden) {
 
         currentOrder = json.balance.orden;
         switchView('station');
-        document.getElementById('stationMesaBadge').textContent = currentOrder.LineaMesa;
+        const stationBadge = document.getElementById('stationMesaBadge');
+        if (stationBadge) {
+            if (currentOrder.LineaMesa && currentOrder.LineaMesa.trim() !== '') {
+                stationBadge.textContent = currentOrder.LineaMesa;
+                stationBadge.style.display = 'inline-block';
+            } else {
+                stationBadge.style.display = 'none';
+            }
+        }
         document.getElementById('stationOrderTitle').textContent = currentOrder.NroOrdenDesposte;
         document.getElementById('stationCanalSubtitle').textContent = `${currentOrder.NombreCanal} (${currentOrder.CodProdCanal})`;
         await loadSpeciesCutsButtons(currentOrder.CodProdCanal);
@@ -282,7 +165,7 @@ async function registerCutWeight() {
     formData.append('csrf_token', csrfToken);
     formData.append('nro_orden', currentOrder.NroOrdenDesposte);
     formData.append('codprod_corte', selectedCutCode);
-    formData.append('peso_neto', peso.toString());
+    formData.append('peso_neto', peso.toFixed(4));
 
     try {
         const res = await fetch('/api/desposte/pesar', { method: 'POST', body: formData });
@@ -332,11 +215,26 @@ function renderBalanceAndTable(balance) {
     const cortes = balance.cortes || [];
     currentOrder = ord;
 
-    document.getElementById('statPesoCanal').textContent = `${parseFloat(ord.PesoCanalEntrada).toFixed(2)} kg`;
+    const isFinalized = (ord.Estado === 'FINALIZADO');
+
+    // Controlar botón de cierre
+    const btnCloseStation = document.getElementById('btnPromptCloseStation');
+    if (btnCloseStation) {
+        btnCloseStation.style.display = isFinalized ? 'none' : 'inline-flex';
+    }
+
+    // Controlar botón de registro
+    const btnReg = document.getElementById('btnRegisterCut');
+    if (btnReg) {
+        btnReg.disabled = isFinalized;
+        btnReg.textContent = isFinalized ? 'ORDEN FINALIZADA' : 'REGISTRAR CORTE';
+    }
+
+    document.getElementById('statPesoCanal').textContent = `${parseFloat(ord.PesoCanalEntrada).toFixed(4)} kg`;
     document.getElementById('statCostoCanal').textContent = `$${parseFloat(ord.CostActCanal).toFixed(2)} /kg`;
-    document.getElementById('statPesoCortes').textContent = `${parseFloat(ord.PesoTotalCortes).toFixed(2)} kg`;
+    document.getElementById('statPesoCortes').textContent = `${parseFloat(ord.PesoTotalCortes).toFixed(4)} kg`;
     document.getElementById('statCantCortes').textContent = cortes.length.toString();
-    document.getElementById('statPesoMerma').textContent = `${parseFloat(ord.PesoMerma).toFixed(2)} kg`;
+    document.getElementById('statPesoMerma').textContent = `${parseFloat(ord.PesoMerma).toFixed(4)} kg`;
     document.getElementById('statPerdidaMerma').textContent = `Pérdida: $${parseFloat(ord.PerdidaMermaDinero).toFixed(2)}`;
     document.getElementById('statRendimiento').textContent = `${parseFloat(ord.RendimientoPct).toFixed(2)}%`;
     document.getElementById('statMermaPct').textContent = `${parseFloat(ord.MermaPct).toFixed(2)}%`;
@@ -354,11 +252,15 @@ function renderBalanceAndTable(balance) {
     cortes.forEach(c => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid var(--border-color)';
+        const deleteBtnHtml = isFinalized
+            ? '<span style="color:var(--text-muted); font-size:0.75rem;">-</span>'
+            : `<button type="button" class="btn btn-outline btn-delete-cut" style="padding:2px 6px; font-size:0.75rem; color:var(--danger);" data-id="${c.ID}" title="Eliminar pesaje">&times;</button>`;
+
         tr.innerHTML = `
             <td style="padding:0.6rem 0.5rem; font-weight:700;">${c.NroItem}</td>
             <td style="padding:0.6rem 0.5rem;"><span class="badge" style="background:#55433a; color:var(--primary); font-family:monospace; font-size:0.8rem;">${c.NroLote}</span></td>
             <td style="padding:0.6rem 0.5rem; font-weight:600; color:var(--text-primary);">${c.NombreCorte}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700;">${parseFloat(c.PesoNeto).toFixed(3)} kg</td>
+            <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700;">${parseFloat(c.PesoNeto).toFixed(4)} kg</td>
             <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--success); font-weight:600;">${parseFloat(c.RendimientoPct).toFixed(2)}%</td>
             <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--text-muted);">$${parseFloat(c.CostActBase).toFixed(2)}</td>
             <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--danger); font-weight:500;">+$${parseFloat(c.CostoMermaKg).toFixed(2)}</td>
@@ -366,7 +268,7 @@ function renderBalanceAndTable(balance) {
             <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:var(--success);">$${parseFloat(c.PrecioVentaSugerido).toFixed(2)}</td>
             <td style="padding:0.6rem 0.5rem; text-align:center; font-size:0.75rem; color:var(--text-muted);">${c.FechaVencimiento}</td>
             <td style="padding:0.6rem 0.5rem; text-align:center;">
-                <button type="button" class="btn btn-outline btn-delete-cut" style="padding:2px 6px; font-size:0.75rem; color:var(--danger);" data-id="${c.ID}" title="Eliminar pesaje">&times;</button>
+                ${deleteBtnHtml}
             </td>
         `;
         tbody.appendChild(tr);
@@ -433,7 +335,7 @@ async function refreshActiveOrders() {
                         <p style="color:var(--text-secondary); max-width:450px; margin:0 auto 1.5rem auto; font-size:0.9rem;">
                             Inicie una nueva orden asignando una mesa y una canal.
                         </p>
-                        <button type="button" class="btn btn-primary" data-action="open-new-order">Iniciar Primera Orden</button>
+                        <a href="/desposte/nueva" class="btn btn-primary">Iniciar Primera Orden</a>
                     </div>`;
                 return;
             }
@@ -450,7 +352,7 @@ async function refreshActiveOrders() {
                     <div>
                         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
                             <div>
-                                <span class="badge" style="background:#55433a; color:var(--primary); font-weight:700; font-size:0.8rem;">${ord.LineaMesa}</span>
+                                ${(ord.LineaMesa && ord.LineaMesa.trim() !== '') ? `<span class="badge" style="background:#55433a; color:var(--primary); font-weight:700; font-size:0.8rem;">${ord.LineaMesa}</span>` : ''}
                                 <h3 style="font-size:1.05rem; font-weight:700; margin-top:0.35rem; color:var(--text-primary);">${ord.NroOrdenDesposte}</h3>
                             </div>
                             <span class="badge badge-success" style="font-size:0.75rem;">EN PROCESO</span>
@@ -463,11 +365,11 @@ async function refreshActiveOrders() {
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; background:rgba(0,0,0,0.15); padding:0.75rem; border-radius:8px; margin-bottom:1rem;">
                             <div>
                                 <div style="font-size:0.75rem; color:var(--text-muted);">Canal Entrada</div>
-                                <div style="font-size:1.1rem; font-weight:700; color:var(--text-primary);">${parseFloat(ord.PesoCanalEntrada).toFixed(2)} kg</div>
+                                <div style="font-size:1.1rem; font-weight:700; color:var(--text-primary);">${parseFloat(ord.PesoCanalEntrada).toFixed(4)} kg</div>
                             </div>
                             <div>
                                 <div style="font-size:0.75rem; color:var(--text-muted);">Cortes Pesados</div>
-                                <div style="font-size:1.1rem; font-weight:700; color:var(--primary);">${parseFloat(ord.PesoTotalCortes).toFixed(2)} kg</div>
+                                <div style="font-size:1.1rem; font-weight:700; color:var(--primary);">${parseFloat(ord.PesoTotalCortes).toFixed(4)} kg</div>
                             </div>
                             <div>
                                 <div style="font-size:0.75rem; color:var(--text-muted);">Rendimiento</div>
@@ -494,13 +396,18 @@ async function refreshActiveOrders() {
 
 // Inicialización de Event Listeners (sin inline handlers, 100% CSP compliant)
 document.addEventListener('DOMContentLoaded', () => {
+    // Si viene de abrir una nueva orden con ?order=..., cargar directamente la estación de pesaje
+    const urlParams = new URLSearchParams(window.location.search);
+    const orderFromUrl = urlParams.get('order');
+    if (orderFromUrl) {
+        loadOrderInStation(orderFromUrl);
+    }
+
     document.addEventListener('click', (e) => {
         const target = e.target.closest('[data-action]');
         if (target) {
             const action = target.dataset.action;
             if (action === 'view-board') switchView('board');
-            else if (action === 'open-new-order') openNewOrderModal();
-            else if (action === 'close-new-order') closeNewOrderModal();
             else if (action === 'prompt-close-order') promptCloseOrder();
             else if (action === 'close-modal-close-order') closeCloseOrderModal();
             return;
@@ -509,12 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnOperate = e.target.closest('.btn-operate-order');
         if (btnOperate && btnOperate.dataset.order) {
             loadOrderInStation(btnOperate.dataset.order);
-            return;
-        }
-
-        const btnMesa = e.target.closest('.mesa-select-btn');
-        if (btnMesa && btnMesa.dataset.mesa) {
-            selectMesa(btnMesa, btnMesa.dataset.mesa);
             return;
         }
 
@@ -536,16 +437,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnConfClose = document.getElementById('btnConfirmCloseOrder');
     if (btnConfClose) btnConfClose.addEventListener('click', executeCloseOrder);
-
-    const formNewOrd = document.getElementById('formNewOrder');
-    if (formNewOrd) formNewOrd.addEventListener('submit', submitNewOrder);
-
-    const selEspecie = document.getElementById('selectCanalEspecie');
-    if (selEspecie) selEspecie.addEventListener('change', (e) => onEspecieChange(e.target.value));
-
-    const selRecepcion = document.getElementById('selectRecepcion');
-    if (selRecepcion) selRecepcion.addEventListener('change', (e) => onRecepcionChange(e.target.value));
-
-    const selPieza = document.getElementById('selectPiezaIndividual');
-    if (selPieza) selPieza.addEventListener('change', (e) => onPiezaChange(e.target));
 });
