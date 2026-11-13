@@ -1,0 +1,229 @@
+<?php
+declare(strict_types=1);
+
+namespace Src\Deboning;
+
+use Config\Security;
+use Src\Auth\AuthController;
+use Src\Utils\View;
+use Throwable;
+
+final class DeboningController
+{
+    /**
+     * Muestra la interfaz táctil y tablero operativo de desposte multi-línea.
+     */
+    public static function index(): void
+    {
+        $user = AuthController::checkAuth();
+
+        try {
+            $species = ConfigService::getSpeciesList();
+            $activeOrders = DeboningService::getActiveOrders();
+            $csrfToken = Security::generateCsrfToken();
+
+            View::render('deboning', [
+                'user' => $user,
+                'species' => $species,
+                'activeOrders' => $activeOrders,
+                'csrf_token' => $csrfToken,
+                'activeNav' => 'desposte',
+                'title' => 'Líneas de Desposte - ST Despostadora'
+            ]);
+        } catch (Throwable $e) {
+            error_log('[DEBONING INDEX ERROR] ' . $e->getMessage());
+            http_response_code(500);
+            echo "Error cargando módulo de desposte: " . htmlspecialchars($e->getMessage());
+        }
+    }
+
+    /**
+     * Endpoint API para abrir una orden de desposte.
+     */
+    public static function open(): void
+    {
+        $user = AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Security::validateCsrfToken($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o expirado.']);
+            return;
+        }
+
+        try {
+            $nroRecepcion = trim((string)($_POST['nro_recepcion'] ?? ''));
+            $lineaMesa = trim((string)($_POST['linea_mesa'] ?? 'Mesa 1'));
+            $nroEspecie = isset($_POST['nro_especie']) && $_POST['nro_especie'] !== '' ? (int)$_POST['nro_especie'] : null;
+            $pesoEntrada = isset($_POST['peso_entrada']) ? (float)$_POST['peso_entrada'] : 0.0;
+            $observaciones = trim((string)($_POST['observaciones'] ?? ''));
+
+            $nroOrden = DeboningService::openOrder([
+                'nro_recepcion' => $nroRecepcion,
+                'linea_mesa' => $lineaMesa,
+                'nro_especie' => $nroEspecie,
+                'peso_entrada' => $pesoEntrada,
+                'observaciones' => $observaciones
+            ], $user['codusua']);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Orden de desposte {$nroOrden} abierta exitosamente.",
+                'nro_orden' => $nroOrden
+            ]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para registrar el pesaje de un corte.
+     */
+    public static function weigh(): void
+    {
+        $user = AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Security::validateCsrfToken($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o expirado.']);
+            return;
+        }
+
+        try {
+            $nroOrden = trim((string)($_POST['nro_orden'] ?? ''));
+            $codProdCorte = trim((string)($_POST['codprod_corte'] ?? ''));
+            $pesoNeto = (float)($_POST['peso_neto'] ?? 0.0);
+
+            $result = DeboningService::weighCut([
+                'nro_orden' => $nroOrden,
+                'codprod_corte' => $codProdCorte,
+                'peso_neto' => $pesoNeto
+            ], $user['codusua']);
+
+            // Traer balance actualizado
+            $balance = DeboningService::getYieldAndCosting($nroOrden);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Corte registrado con Lote: {$result['nro_lote']}",
+                'cut' => $result,
+                'balance' => $balance
+            ]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para anular un corte pesado.
+     */
+    public static function deleteCut(): void
+    {
+        $user = AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Security::validateCsrfToken($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o expirado.']);
+            return;
+        }
+
+        try {
+            $nroOrden = trim((string)($_POST['nro_orden'] ?? ''));
+            $id = (int)($_POST['id'] ?? 0);
+
+            DeboningService::deleteCut($nroOrden, $id, $user['codusua']);
+            $balance = DeboningService::getYieldAndCosting($nroOrden);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Pesaje eliminado correctamente.",
+                'balance' => $balance
+            ]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para consultar el balance y tabla de costeo en tiempo real.
+     */
+    public static function balance(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $nroOrden = trim((string)($_GET['nro_orden'] ?? ''));
+            if ($nroOrden === '') {
+                throw new \InvalidArgumentException("Nro de orden no especificado.");
+            }
+
+            $balance = DeboningService::getYieldAndCosting($nroOrden);
+            echo json_encode(['success' => true, 'balance' => $balance]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para cerrar definitivamente una orden de desposte.
+     */
+    public static function close(): void
+    {
+        $user = AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Security::validateCsrfToken($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o expirado.']);
+            return;
+        }
+
+        try {
+            $nroOrden = trim((string)($_POST['nro_orden'] ?? ''));
+            DeboningService::closeOrder($nroOrden, $user['codusua']);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Orden de desposte {$nroOrden} cerrada exitosamente. Cortes y mermas cargados en existencias internas."
+            ]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para obtener recepciones disponibles para abrir órdenes.
+     */
+    public static function availableReceptions(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $canal = trim((string)($_GET['canal'] ?? ''));
+            $receptions = ReceptionService::getAvailableForDeboning($canal);
+            echo json_encode(['success' => true, 'receptions' => $receptions]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para obtener el listado de órdenes activas (para polling o refresco del tablero).
+     */
+    public static function active(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $orders = DeboningService::getActiveOrders();
+            echo json_encode(['success' => true, 'orders' => $orders]);
+        } catch (Throwable $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+}

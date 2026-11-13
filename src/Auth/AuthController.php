@@ -161,4 +161,25 @@ final class AuthController
             'codvend' => $_SESSION['user_codvend'] ?? '',
         ];
     }
+
+    public static function isLevelOne(?string $nivel): bool
+    {
+        $n = trim((string)$nivel);
+        return $n === '01' || $n === '1' || (int)$n === 1;
+    }
+
+    public static function requireAdmin(): array
+    {
+        $user = self::checkAuth();
+        if (!self::isLevelOne($user['nivel'] ?? '')) {
+            http_response_code(403);
+            View::render('errors/403', [
+                'user' => $user,
+                'title' => 'Acceso Denegado'
+            ]);
+            exit;
+        }
+
+        return $user;
+    }
 }

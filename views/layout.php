@@ -50,6 +50,18 @@ use Config\Assets;
                         </a>
                     </li>
                     <li>
+                        <a href="/recepcion" class="nav-link <?= ($activeNav ?? '') === 'recepcion' ? 'active' : '' ?>">
+                            <div class="nav-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                                </svg>
+                            </div>
+                            <span>Recepción de Canales</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="/deboning" class="nav-link <?= ($activeNav ?? '') === 'deboning' ? 'active' : '' ?>">
                             <div class="nav-icon">
                                 <svg class="icon" viewBox="0 0 24 24">
@@ -63,6 +75,22 @@ use Config\Assets;
                             <span>Sala de Desposte</span>
                         </a>
                     </li>
+                    <?php 
+                    $userNivel = trim((string)($user['nivel'] ?? ''));
+                    if ($userNivel === '01' || $userNivel === '1' || (int)$userNivel === 1): 
+                    ?>
+                    <li>
+                        <a href="/configuracion" class="nav-link <?= ($activeNav ?? '') === 'configuracion' ? 'active' : '' ?>">
+                            <div class="nav-icon">
+                                <svg class="icon" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                </svg>
+                            </div>
+                            <span>Configuración</span>
+                        </a>
+                    </li>
+                    <?php endif; ?>
                 </ul>
             </nav>
 
