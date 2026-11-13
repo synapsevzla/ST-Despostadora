@@ -1,0 +1,14 @@
+# Entorno
+.env
+license_cache.json
+
+# Logs y temporales
+*.log
+scratch/
+.cache/
+
+# SO y Editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
