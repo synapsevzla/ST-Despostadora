@@ -81,6 +81,29 @@ final class CorrelativeService
     }
 
     /**
+     * Previsualiza el siguiente correlativo configurado para un tipo de documento.
+     */
+    public static function previewNext(string $tipo): string
+    {
+        try {
+            $pdo = Database::getConnection();
+            $stmt = $pdo->prepare("SELECT UltimoNumero, Prefijo, Longitud FROM ST_Despostadora_Correlativos WHERE Tipo = :tipo");
+            $stmt->bindValue(':tipo', strtoupper(trim($tipo)), PDO::PARAM_STR);
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$row) {
+                return 'REC-0000000000000001';
+            }
+
+            $nextVal = ((int)$row['UltimoNumero']) + 1;
+            return self::preview((string)$row['Prefijo'], (int)$row['Longitud'], $nextVal);
+        } catch (Throwable $e) {
+            return 'REC-0000000000000001';
+        }
+    }
+
+    /**
      * Genera automáticamente un número de lote estructurado para un corte dentro de una orden.
      * Estructura: PREFIJO + AAAAMMDD + - + SECUENCIA_ORDEN + - + ITEM
      * Ejemplo: LOT-20261113-0001-01

@@ -13,10 +13,10 @@ ob_start();
                 <h3 class="card-title" style="margin-bottom: 0.25rem;">Recepción de Carne en Canal y Especies</h3>
                 <p class="card-desc">Ingreso y pesaje de canales (reses, cerdos, aves, pescado) por peso global, lote o pesaje individual.</p>
             </div>
-            <button type="button" class="btn btn-primary" style="width: auto; min-width: 190px;" data-action="abrir-modal-recepcion">
+            <a href="/recepcion/nueva" class="btn btn-primary" style="width: auto; min-width: 190px; text-decoration: none;">
                 <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 + Nueva Recepción
-            </button>
+            </a>
         </div>
     </div>
 
@@ -117,148 +117,6 @@ ob_start();
                 </table>
             </div>
         <?php endif; ?>
-    </div>
-</div>
-
-<!-- Modal Formulario de Nueva Recepción -->
-<div id="modalRecepcion" class="sidebar-overlay" style="display: none; align-items: center; justify-content: center; z-index: 100;">
-    <div class="card" style="max-width: 680px; width: 95%; max-height: 90vh; overflow-y: auto;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
-            <div>
-                <h4 style="margin: 0; font-size: 1.2rem; color: var(--text-primary);">Nueva Entrada de Carne en Canal</h4>
-                <p style="margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--text-secondary);">Seleccione especie y el método de pesaje para la recepción.</p>
-            </div>
-            <button type="button" data-action="cerrar-modal-recepcion" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.5rem;">&times;</button>
-        </div>
-
-        <form id="formNuevaRecepcion">
-            <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token) ?>">
-            
-            <!-- Datos Base -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="rec_codprod">Especie / Canal Habilitada</label>
-                    <select name="codprod" id="rec_codprod" class="form-input" required>
-                        <option value="">-- Seleccione Especie --</option>
-                        <?php foreach ($species as $sp): ?>
-                            <option value="<?= Security::escape($sp['CodProd']) ?>" data-costo="<?= (float)$sp['CostActCanal'] ?>" data-unidad="<?= Security::escape($sp['Unidad']) ?>">
-                                [<?= Security::escape($sp['CodProd']) ?>] <?= Security::escape($sp['NombreEspecie']) ?> - Costo: $<?= number_format((float)$sp['CostActCanal'], 2) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 0;">
-                    <label class="form-label" for="rec_codubic">Depósito de Entrada</label>
-                    <select name="codubic" id="rec_codubic" class="form-input" required>
-                        <?php foreach ($deposits as $dep): ?>
-                            <option value="<?= Security::escape($dep['CodUbic']) ?>" <?= $defaultCodUbic === $dep['CodUbic'] ? 'selected' : '' ?>>
-                                [<?= Security::escape($dep['CodUbic']) ?>] <?= Security::escape($dep['Descrip']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Selector de los 3 Métodos de Entrada -->
-            <div class="form-group" style="margin-bottom: 1.25rem;">
-                <label class="form-label">Método de Registro de la Canal</label>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.75rem;">
-                    <label class="metodo-radio-btn active" id="lbl_metodo_1">
-                        <input type="radio" name="metodo_entrada" value="SOLO_PESO" checked>
-                        <span style="font-weight: 700; display: block; font-size: 0.95rem;">1. Solo Peso</span>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Peso global neto recibido</span>
-                    </label>
-                    <label class="metodo-radio-btn" id="lbl_metodo_2">
-                        <input type="radio" name="metodo_entrada" value="PESO_CANTIDAD">
-                        <span style="font-weight: 700; display: block; font-size: 0.95rem;">2. Peso y Cantidad</span>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Lote con cálculo de promedio</span>
-                    </label>
-                    <label class="metodo-radio-btn" id="lbl_metodo_3">
-                        <input type="radio" name="metodo_entrada" value="PESO_INDIVIDUAL">
-                        <span style="font-weight: 700; display: block; font-size: 0.95rem;">3. Pieza por Pieza</span>
-                        <span style="font-size: 0.75rem; color: var(--text-muted);">Pesaje individual por res/canal</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Panel para Método 1: Solo Peso y Método 2: Peso y Cantidad -->
-            <div id="panel_pesos_estandar">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
-                    <div class="form-group" id="grp_cantidad_especies" style="display: none; margin-bottom: 0;">
-                        <label class="form-label">N° de Cabezas / Especies</label>
-                        <input type="number" name="cantidad" id="rec_cantidad" class="form-input" min="1" value="1">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Peso Bruto (Kg)</label>
-                        <input type="number" step="0.01" min="0" name="peso_bruto" id="rec_peso_bruto" class="form-input" value="0.00">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Tara (Kg)</label>
-                        <input type="number" step="0.01" min="0" name="tara" id="rec_tara" class="form-input" value="0.00">
-                    </div>
-
-                    <div class="form-group" style="margin-bottom: 0;">
-                        <label class="form-label">Peso Neto (Kg)</label>
-                        <input type="number" step="0.01" min="0" name="peso_neto" id="rec_peso_neto" class="form-input" value="0.00" readonly style="background: var(--bg-main); font-weight: 700; color: var(--primary);">
-                    </div>
-                </div>
-
-                <!-- Resumen en Vivo para Método 2 -->
-                <div id="box_promedio_cabeza" style="display: none; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
-                        <span>Peso Promedio por Cabeza: <strong id="lbl_peso_promedio" style="color: var(--primary);">0.00 kg</strong></span>
-                        <span>Costo Estimado por Cabeza: <strong id="lbl_costo_promedio" style="color: var(--success);">$0.00</strong></span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Panel para Método 3: Peso por Especie Separada (Pesaje Individual) -->
-            <div id="panel_pesos_individual" style="display: none; margin-bottom: 1.25rem;">
-                <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem;">
-                    <label class="form-label" style="margin-bottom: 0.5rem;">Captura Rápida de Pesaje Individual (Balanza / Teclado)</label>
-                    
-                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
-                        <input type="number" step="0.01" min="0.1" id="input_peso_individual" class="form-input" placeholder="Ingrese peso en Kg (ej. 295.4)" style="font-size: 1.15rem; font-weight: 700;">
-                        <button type="button" class="btn btn-primary" style="width: auto; min-width: 140px;" data-action="agregar-pieza-individual">
-                            + Agregar
-                        </button>
-                    </div>
-
-                    <!-- Resumen del Lote Individual -->
-                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem; font-size: 0.9rem; flex-wrap: wrap; gap: 0.5rem;">
-                        <span>Piezas: <strong id="lbl_ind_total_piezas" style="color: var(--primary);">0</strong></span>
-                        <span>Peso Total: <strong id="lbl_ind_total_peso" style="color: var(--primary);">0.00 kg</strong></span>
-                        <span>Promedio: <strong id="lbl_ind_peso_promedio" style="color: var(--accent);">0.00 kg/pieza</strong></span>
-                    </div>
-
-                    <!-- Lista de Piezas Registradas -->
-                    <div id="lista_piezas_individuales" style="max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.35rem; padding-right: 0.25rem;">
-                        <span style="color: var(--text-muted); font-size: 0.85rem; text-align: center; display: block; padding: 1rem;">
-                            No hay pesajes capturados. Ingrese los pesos de cada novillo/canal individualmente.
-                        </span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Observaciones -->
-            <div class="form-group" style="margin-bottom: 1.25rem;">
-                <label class="form-label" for="rec_observaciones">Observaciones / Nro de Guía de Matadero</label>
-                <input type="text" name="observaciones" id="rec_observaciones" class="form-input" placeholder="Ej. Guía Matadero #49102, Transporte refrigerado #12">
-            </div>
-
-            <!-- Botones de Acción -->
-            <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
-                <button type="button" class="btn" data-action="cerrar-modal-recepcion" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); width: auto;">
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary" style="width: auto; min-width: 190px;" id="btnGuardarRecepcion">
-                    Procesar Recepción
-                </button>
-            </div>
-        </form>
     </div>
 </div>
 

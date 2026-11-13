@@ -75,6 +75,10 @@ switch ($requestUri) {
         ReceptionController::index();
         break;
 
+    case '/recepcion/nueva':
+        ReceptionController::nueva();
+        break;
+
     case '/api/recepcion/crear':
         if ($requestMethod === 'POST') {
             ReceptionController::create();

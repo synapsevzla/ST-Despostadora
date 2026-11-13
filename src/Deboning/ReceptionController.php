@@ -43,6 +43,37 @@ final class ReceptionController
     }
 
     /**
+     * Muestra la página completa e independiente para registrar una nueva recepción.
+     */
+    public static function nueva(): void
+    {
+        $user = AuthController::checkAuth();
+
+        try {
+            $species = ConfigService::getSpeciesList();
+            $deposits = ConfigService::getDeposits();
+            $defaultCodUbic = ConfigService::getConfig('DEFAULT_CODUBIC', '');
+            $nextCorrelativo = CorrelativeService::previewNext('RECEPCION');
+            $csrfToken = Security::generateCsrfToken();
+
+            View::render('recepcion_nueva', [
+                'user' => $user,
+                'species' => $species,
+                'deposits' => $deposits,
+                'defaultCodUbic' => $defaultCodUbic,
+                'nextCorrelativo' => $nextCorrelativo,
+                'csrf_token' => $csrfToken,
+                'activeNav' => 'recepcion',
+                'title' => 'Nueva Recepción de Canales - ST Despostadora'
+            ]);
+        } catch (Throwable $e) {
+            error_log('[RECEPTION NUEVA ERROR] ' . $e->getMessage());
+            http_response_code(500);
+            echo "Error cargando formulario de recepción: " . htmlspecialchars($e->getMessage());
+        }
+    }
+
+    /**
      * Endpoint API para registrar una nueva recepción.
      */
     public static function create(): void
