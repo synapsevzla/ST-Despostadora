@@ -4,7 +4,33 @@
  */
 document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
+    initClock();
 });
+
+function initClock() {
+    const clockEl = document.getElementById('liveClock');
+    if (!clockEl) return;
+
+    function update() {
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('es-ES', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        const formattedTime = now.toLocaleTimeString('es-ES', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: true
+        });
+        clockEl.textContent = `${formattedDate} • ${formattedTime}`;
+    }
+
+    update();
+    setInterval(update, 1000);
+}
 
 function initSidebar() {
     const sidebar = document.getElementById('appSidebar');

@@ -5,6 +5,7 @@ namespace Src\Auth;
 
 use Config\Database;
 use Config\Security;
+use Src\Database\MigrationRunner;
 use Src\Utils\View;
 use PDO;
 use Exception;
@@ -107,6 +108,13 @@ final class AuthController
             $_SESSION['user_nivel']   = trim((string)$user['Nivel']);
             $_SESSION['user_codvend'] = trim((string)$user['CodVend']);
             $_SESSION['logged_at']    = time();
+
+            // Ejecución de migraciones pendientes tras login exitoso
+            try {
+                MigrationRunner::runPending();
+            } catch (\Throwable $mEx) {
+                error_log('[MIGRATION ERROR ON LOGIN] ' . $mEx->getMessage());
+            }
 
             header('Location: /');
             exit;

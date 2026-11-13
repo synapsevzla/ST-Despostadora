@@ -413,13 +413,16 @@ body {
     font-weight: 600;
 }
 
-.sidebar-status-indicator {
-    font-size: 0.75rem;
-    color: var(--text-muted);
+.header-datetime {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-secondary);
     background: var(--bg-card);
-    padding: 0.25rem 0.6rem;
+    padding: 0.35rem 0.75rem;
     border-radius: 6px;
     border: 1px solid var(--border-color);
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
 }
 
 /* Page Content */

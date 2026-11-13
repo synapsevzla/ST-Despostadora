@@ -118,11 +118,15 @@ El proyecto implementa defensas obligatorias contra vulnerabilidades críticas:
 ├── config/
 │   ├── database.php          # Parser nativo de .env y conexión Singleton PDO SQL Server
 │   └── security.php          # Cabeceras HTTP, sesión segura, CSRF y sanitización
+├── database/
+│   └── migrations/           # Scripts SQL inmutables (AAAAMMDD_HHMMSS_Nombre.sql)
 ├── src/
 │   ├── Auth/
 │   │   ├── AuthController.php# Login contra ssusrs, logout y control de acceso
 │   │   ├── LicenseService.php# Validación de licencia (SACONF + Firebase RTDB)
 │   │   └── RateLimiter.php   # Control de intentos fallidos sin dependencias
+│   ├── Database/
+│   │   └── MigrationRunner.php # Ejecutor autónomo de migraciones SQL con checksum y validaciones
 │   ├── Deboning/             # Módulo Central de Desposte / Despostadora
 │   │   ├── DeboningModel.php # Consultas, cálculos de rendimiento y transacciones SQL Server
 │   │   └── DeboningController.php # Control de flujo, pesajes y endpoints API JSON

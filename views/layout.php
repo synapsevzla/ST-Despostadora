@@ -97,7 +97,7 @@ use Config\Assets;
                     <h2 class="header-title"><?= Security::escape($pageTitle ?? 'Inicio') ?></h2>
                 </div>
                 <div class="header-right">
-                    <span class="sidebar-status-indicator">Menú auto-ocultable activo</span>
+                    <div id="liveClock" class="header-datetime" aria-live="polite"></div>
                 </div>
             </header>
 

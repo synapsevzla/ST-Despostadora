@@ -6,7 +6,9 @@ use Config\Security;
 ob_start();
 ?>
 <div class="card">
-    <h3 class="card-title">Bienvenido a Soluciones Totales Despostadora</h3>
+    <h3 class="card-title">
+        ¡Hola, <?= Security::escape($user['descrip'] ?? $user['codusua'] ?? 'Usuario') ?>! Bienvenido a Soluciones Totales Despostadora
+    </h3>
     <p class="card-desc">
         Módulo operativo para el control de pesajes, rendimientos cárnicos y desglose de canales.
     </p>
