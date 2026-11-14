@@ -92,11 +92,13 @@ final class DeboningService
             $sqlInsOrd = "INSERT INTO ST_Despostadora_Despostes
                 (NroOrdenDesposte, NroRecepcion, LineaMesa, FechaHoraInicio, CodUsua, CodProdCanal,
                  CostActCanal, CantidadProcesada, PesoCanalEntrada, CostoTotalCanal, PesoTotalCortes,
-                 PesoMerma, CostoPerdidaMerma, RendimientoPct, MermaPct, Estado, Observaciones)
+                 PesoMerma, CostoPerdidaMerma, RendimientoPct, MermaPct, Estado, Observaciones,
+                 Version, UltimaModif, UltimoUsuarioModif)
                 VALUES
                 (:nroord, :nrorec, :linea, SYSUTCDATETIME(), :codusua, :codprod,
                  :costact, :cant, :pesocanal, :costotot, 0,
-                 0, 0, 0, 0, 'EN_PROCESO', :obs)";
+                 0, 0, 0, 0, 'EN_PROCESO', :obs,
+                 1, SYSUTCDATETIME(), :codusuamod)";
 
             $stmtIns = $pdo->prepare($sqlInsOrd);
             $stmtIns->bindValue(':nroord', $nroOrdenDesposte, PDO::PARAM_STR);
@@ -109,6 +111,7 @@ final class DeboningService
             $stmtIns->bindValue(':pesocanal', $pesoCanalEntrada, PDO::PARAM_STR);
             $stmtIns->bindValue(':costotot', $costoTotalCanal, PDO::PARAM_STR);
             $stmtIns->bindValue(':obs', $observaciones !== '' ? $observaciones : null, $observaciones !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtIns->bindValue(':codusuamod', $codusua, PDO::PARAM_STR);
             $stmtIns->execute();
 
             $nuevoDisp = (float)$rec['PesoDisponible'] - $pesoCanalEntrada;
@@ -179,58 +182,61 @@ final class DeboningService
             throw new RuntimeException("El peso neto debe ser mayor a cero.");
         }
 
-        $stmtOrd = $pdo->prepare("SELECT NroOrdenDesposte, CodProdCanal, CostActCanal, PesoCanalEntrada, Estado
-                                  FROM ST_Despostadora_Despostes WHERE NroOrdenDesposte = :nro");
-        $stmtOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
-        $stmtOrd->execute();
-        $ord = $stmtOrd->fetch(PDO::FETCH_ASSOC);
-
-        if (!$ord || $ord['Estado'] !== 'EN_PROCESO') {
-            throw new RuntimeException("La orden '{$nroOrden}' no está activa.");
-        }
-
-        $codProdCanal = (string)$ord['CodProdCanal'];
-        $pesoCanalEntrada = (float)$ord['PesoCanalEntrada'];
-
-        $stmtMatriz = $pdo->prepare("SELECT c.CodProdCorte, c.DiasVencimiento,
-                                            CAST(ISNULL(p.CostAct, 0) AS FLOAT) AS CostActCorte,
-                                            LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCorte
-                                     FROM ST_Despostadora_EspeciesCortes c
-                                     INNER JOIN SAPROD p ON p.CodProd = c.CodProdCorte
-                                     WHERE c.CodProdCanal = :canal AND c.CodProdCorte = :corte AND c.Activo = 1");
-        $stmtMatriz->bindValue(':canal', $codProdCanal, PDO::PARAM_STR);
-        $stmtMatriz->bindValue(':corte', $codProdCorte, PDO::PARAM_STR);
-        $stmtMatriz->execute();
-        $matriz = $stmtMatriz->fetch(PDO::FETCH_ASSOC);
-
-        if (!$matriz) {
-            throw new RuntimeException("El corte '{$codProdCorte}' no está asignado a la especie.");
-        }
-
-        $costActBase = (float)$matriz['CostActCorte'];
-        $diasVencimiento = (int)$matriz['DiasVencimiento'] > 0 ? (int)$matriz['DiasVencimiento'] : 30;
-
-        $stmtItem = $pdo->prepare("SELECT ISNULL(MAX(NroItem), 0) + 1 AS NextItem FROM ST_Despostadora_DespostesDetalle WHERE NroOrdenDesposte = :nro");
-        $stmtItem->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
-        $stmtItem->execute();
-        $nextItem = (int)($stmtItem->fetch(PDO::FETCH_ASSOC)['NextItem'] ?? 1);
-
-        $nroLote = CorrelativeService::generateBatchNumber($pdo, $nroOrden, $nextItem);
-        $fechaElab = date('Y-m-d');
-        $fechaVenc = date('Y-m-d', strtotime("+{$diasVencimiento} days"));
-        $rendimientoCortePct = $pesoCanalEntrada > 0 ? round(($pesoNeto / $pesoCanalEntrada) * 100, 2) : 0.0;
-        $margenDefault = (float)ConfigService::getConfig('MARGEN_UTILIDAD_DEFAULT', '30.00');
-
         $pdo->beginTransaction();
         try {
+            $stmtOrd = $pdo->prepare("SELECT NroOrdenDesposte, CodProdCanal, CostActCanal, PesoCanalEntrada, Estado
+                                      FROM ST_Despostadora_Despostes WITH (UPDLOCK, HOLDLOCK) WHERE NroOrdenDesposte = :nro");
+            $stmtOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
+            $stmtOrd->execute();
+            $ord = $stmtOrd->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ord || $ord['Estado'] !== 'EN_PROCESO') {
+                throw new RuntimeException("La orden '{$nroOrden}' no está activa o ya fue finalizada.");
+            }
+
+            $codProdCanal = (string)$ord['CodProdCanal'];
+            $pesoCanalEntrada = (float)$ord['PesoCanalEntrada'];
+
+            $stmtMatriz = $pdo->prepare("SELECT c.CodProdCorte, c.DiasVencimiento,
+                                                CAST(ISNULL(p.CostAct, 0) AS FLOAT) AS CostActCorte,
+                                                LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCorte
+                                         FROM ST_Despostadora_EspeciesCortes c
+                                         INNER JOIN SAPROD p ON p.CodProd = c.CodProdCorte
+                                         WHERE c.CodProdCanal = :canal AND c.CodProdCorte = :corte AND c.Activo = 1");
+            $stmtMatriz->bindValue(':canal', $codProdCanal, PDO::PARAM_STR);
+            $stmtMatriz->bindValue(':corte', $codProdCorte, PDO::PARAM_STR);
+            $stmtMatriz->execute();
+            $matriz = $stmtMatriz->fetch(PDO::FETCH_ASSOC);
+
+            if (!$matriz) {
+                throw new RuntimeException("El corte '{$codProdCorte}' no está asignado a la especie.");
+            }
+
+            $costActBase = (float)$matriz['CostActCorte'];
+            $diasVencimiento = (int)$matriz['DiasVencimiento'] > 0 ? (int)$matriz['DiasVencimiento'] : 30;
+
+            $stmtItem = $pdo->prepare("SELECT ISNULL(MAX(NroItem), 0) + 1 AS NextItem FROM ST_Despostadora_DespostesDetalle WITH (UPDLOCK, HOLDLOCK) WHERE NroOrdenDesposte = :nro");
+            $stmtItem->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
+            $stmtItem->execute();
+            $nextItem = (int)($stmtItem->fetch(PDO::FETCH_ASSOC)['NextItem'] ?? 1);
+
+            $nroLote = CorrelativeService::generateBatchNumber($pdo, $nroOrden, $nextItem);
+            $fechaElab = date('Y-m-d');
+            $fechaVenc = date('Y-m-d', strtotime("+{$diasVencimiento} days"));
+            $rendimientoCortePct = $pesoCanalEntrada > 0 ? round(($pesoNeto / $pesoCanalEntrada) * 100, 2) : 0.0;
+            $margenDefault = (float)ConfigService::getConfig('MARGEN_UTILIDAD_DEFAULT', '30.00');
+
             $sqlInsDet = "INSERT INTO ST_Despostadora_DespostesDetalle
                 (NroOrdenDesposte, NroItem, NroLote, CodProdCorte, PesoNeto, RendimientoCortePct,
                  CostActBase, CostoMermaAbsorbidoKg, CostoRealUnitario, CostoRealTotal, MargenUtilidadPct,
-                 PrecioVentaSugerido, FechaElaboracion, FechaVencimiento, FechaHoraPesaje)
+                 PrecioVentaSugerido, FechaElaboracion, FechaVencimiento, FechaHoraPesaje,
+                 CodUsuaCreacion, FechaHoraCreacion)
+                OUTPUT INSERTED.ID
                 VALUES
                 (:nroord, :item, :lote, :corte, :peso, :rend,
                  :costbase, 0, :costunit, :costtot, :margen,
-                 :preciosug, :elab, :venc, SYSUTCDATETIME())";
+                 :preciosug, :elab, :venc, SYSUTCDATETIME(),
+                 :codusua, SYSUTCDATETIME())";
 
             $costoRealTotalPrelim = round($pesoNeto * $costActBase, 4);
             $precioSugPrelim = ($margenDefault < 100 && $costActBase > 0)
@@ -251,12 +257,30 @@ final class DeboningService
             $stmtInsDet->bindValue(':preciosug', $precioSugPrelim, PDO::PARAM_STR);
             $stmtInsDet->bindValue(':elab', $fechaElab, PDO::PARAM_STR);
             $stmtInsDet->bindValue(':venc', $fechaVenc, PDO::PARAM_STR);
+            $stmtInsDet->bindValue(':codusua', $codusua, PDO::PARAM_STR);
             $stmtInsDet->execute();
 
-            self::recalculateOrderHeader($pdo, $nroOrden);
+            $insertedId = (int)$stmtInsDet->fetchColumn();
+
+            // Registrar trazabilidad inmutable
+            DeboningCutsAuditService::log(
+                $pdo,
+                $nroOrden,
+                $insertedId,
+                $nroLote,
+                $codProdCorte,
+                'PESAJE_INICIAL',
+                null,
+                $pesoNeto,
+                null,
+                $codusua
+            );
+
+            self::recalculateOrderWithVersion($pdo, $nroOrden, $codusua);
             $pdo->commit();
 
             return [
+                'id' => $insertedId,
                 'nro_lote' => $nroLote,
                 'nro_item' => $nextItem,
                 'codprod_corte' => $codProdCorte,
@@ -273,30 +297,56 @@ final class DeboningService
     }
 
     /**
-     * Elimina un pesaje de corte antes del cierre.
+     * Elimina un pesaje de corte antes del cierre registrando auditoría inmutable.
      */
     public static function deleteCut(string $nroOrden, int $itemId, string $codusua): void
     {
         $pdo = Database::getConnection();
 
-        $stmtOrd = $pdo->prepare("SELECT Estado FROM ST_Despostadora_Despostes WHERE NroOrdenDesposte = :nro");
-        $stmtOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
-        $stmtOrd->execute();
-        $ord = $stmtOrd->fetch(PDO::FETCH_ASSOC);
-
-        if (!$ord || $ord['Estado'] !== 'EN_PROCESO') {
-            throw new RuntimeException("Solo se pueden anular pesajes en órdenes EN_PROCESO.");
-        }
-
         $pdo->beginTransaction();
         try {
+            $stmtOrd = $pdo->prepare("SELECT Estado FROM ST_Despostadora_Despostes WITH (UPDLOCK, HOLDLOCK) WHERE NroOrdenDesposte = :nro");
+            $stmtOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
+            $stmtOrd->execute();
+            $ord = $stmtOrd->fetch(PDO::FETCH_ASSOC);
+
+            if (!$ord || $ord['Estado'] !== 'EN_PROCESO') {
+                throw new RuntimeException("Solo se pueden anular pesajes en órdenes activas EN_PROCESO.");
+            }
+
+            // Buscar datos del corte antes de borrar para trazabilidad
+            $stmtDet = $pdo->prepare("SELECT ID, NroLote, CodProdCorte, CAST(PesoNeto AS FLOAT) AS PesoNeto
+                                      FROM ST_Despostadora_DespostesDetalle WITH (UPDLOCK, HOLDLOCK)
+                                      WHERE ID = :id AND NroOrdenDesposte = :nro");
+            $stmtDet->bindValue(':id', $itemId, PDO::PARAM_INT);
+            $stmtDet->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
+            $stmtDet->execute();
+            $det = $stmtDet->fetch(PDO::FETCH_ASSOC);
+
+            if (!$det) {
+                throw new RuntimeException("El pesaje indicado no existe o ya fue eliminado.");
+            }
+
             $stmtDel = $pdo->prepare("DELETE FROM ST_Despostadora_DespostesDetalle WHERE NroOrdenDesposte = :nro AND ID = :id");
             $stmtDel->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
             $stmtDel->bindValue(':id', $itemId, PDO::PARAM_INT);
             $stmtDel->execute();
 
-            self::recalculateOrderHeader($pdo, $nroOrden);
-            AuditService::log('DESPOSTE', $nroOrden, 'ELIMINAR_CORTE', $codusua, ['IDDetalle' => $itemId], $pdo);
+            DeboningCutsAuditService::log(
+                $pdo,
+                $nroOrden,
+                $itemId,
+                (string)$det['NroLote'],
+                (string)$det['CodProdCorte'],
+                'ANULACION',
+                (float)$det['PesoNeto'],
+                0.0,
+                'Anulado por operador',
+                $codusua
+            );
+
+            self::recalculateOrderWithVersion($pdo, $nroOrden, $codusua);
+            AuditService::log('DESPOSTE', $nroOrden, 'ELIMINAR_CORTE', $codusua, ['IDDetalle' => $itemId, 'Lote' => $det['NroLote']], $pdo);
             $pdo->commit();
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
@@ -313,76 +363,7 @@ final class DeboningService
      */
     public static function getYieldAndCosting(string $nroOrden): array
     {
-        $pdo = Database::getConnection();
-
-        // Sincronizar cruce ERP si la orden está finalizada
-        DeboningErpHoldService::syncDeboningCruceStatus($pdo, $nroOrden);
-
-        $stmtOrd = $pdo->prepare("SELECT d.NroOrdenDesposte, d.NroRecepcion, d.LineaMesa, d.FechaHoraInicio,
-                                         d.CodProdCanal, d.CostActCanal, d.PesoCanalEntrada, d.CostoTotalCanal,
-                                         d.Estado, r.CodUbic,
-                                         d.DocDescargoEnviado, d.DocDescargoNumeroD, d.DocDescargoProcesado,
-                                         d.DocDescargoNumeroDOficial, d.DocDescargoTipoOpIFinal, d.FechaDocDescargoProcesado,
-                                         d.DocCargoEnviado, d.DocCargoNumeroD, d.DocCargoProcesado,
-                                         d.DocCargoNumeroDOficial, d.DocCargoTipoOpIFinal, d.FechaDocCargoProcesado,
-                                         d.EstadoCruceERP,
-                                         LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal
-                                  FROM ST_Despostadora_Despostes d
-                                  INNER JOIN ST_Despostadora_Recepciones r ON r.NroRecepcion = d.NroRecepcion
-                                  INNER JOIN SAPROD p ON p.CodProd = d.CodProdCanal
-                                  WHERE d.NroOrdenDesposte = :nro");
-        $stmtOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
-        $stmtOrd->execute();
-        $ord = $stmtOrd->fetch(PDO::FETCH_ASSOC);
-
-        if (!$ord) {
-            throw new RuntimeException("La orden '{$nroOrden}' no existe.");
-        }
-
-        $pesoCanal = (float)$ord['PesoCanalEntrada'];
-        $costActCanal = (float)$ord['CostActCanal'];
-
-        $stmtCuts = $pdo->prepare("SELECT det.ID, det.NroItem, det.NroLote, det.CodProdCorte,
-                                          CAST(det.PesoNeto AS FLOAT) AS PesoNeto,
-                                          CAST(det.CostActBase AS FLOAT) AS CostActBase,
-                                          CAST(det.MargenUtilidadPct AS FLOAT) AS MargenUtilidadPct,
-                                          det.FechaElaboracion, det.FechaVencimiento,
-                                          LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCorte,
-                                          p.Unidad
-                                   FROM ST_Despostadora_DespostesDetalle det
-                                   INNER JOIN SAPROD p ON p.CodProd = det.CodProdCorte
-                                   WHERE det.NroOrdenDesposte = :nro
-                                   ORDER BY det.NroItem ASC");
-        $stmtCuts->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
-        $stmtCuts->execute();
-        $cuts = $stmtCuts->fetchAll(PDO::FETCH_ASSOC);
-
-        $computed = YieldCalculator::compute($pesoCanal, $costActCanal, $cuts);
-
-        return [
-            'orden' => array_merge($ord, [
-                'PesoCanalEntrada' => $pesoCanal,
-                'CostActCanal' => $costActCanal,
-                'CostoTotalCanal' => round($pesoCanal * $costActCanal, 4),
-                'PesoTotalCortes' => $computed['PesoTotalCortes'],
-                'PesoMerma' => $computed['PesoMerma'],
-                'PerdidaMermaDinero' => $computed['PerdidaMermaDinero'],
-                'RendimientoPct' => $computed['RendimientoPct'],
-                'MermaPct' => $computed['MermaPct'],
-                'DescuadreFisico' => $computed['DescuadreFisico']
-            ]),
-            'cortes' => $computed['Cortes'],
-            'especie_cortes' => ConfigService::getSpeciesCuts((string)$ord['CodProdCanal']),
-            'totales' => [
-                'PesoCanal' => $pesoCanal,
-                'PesoCortes' => $computed['PesoTotalCortes'],
-                'PesoMerma' => $computed['PesoMerma'],
-                'CostoTotalCanal' => round($pesoCanal * $costActCanal, 4),
-                'TotalCostoRealCortes' => $computed['TotalCostoRealCortes'],
-                'RendimientoGlobalPct' => $computed['RendimientoPct'],
-                'MermaGlobalPct' => $computed['MermaPct']
-            ]
-        ];
+        return DeboningQueryService::getYieldAndCosting($nroOrden);
     }
 
     /**
@@ -471,15 +452,23 @@ final class DeboningService
 
             $stmtCierreOrd = $pdo->prepare("UPDATE ST_Despostadora_Despostes
                 SET FechaHoraCierre = SYSUTCDATETIME(), PesoTotalCortes = :pesocortes, PesoMerma = :pesomerma,
-                    CostoPerdidaMerma = :perdidamerma, RendimientoPct = :rend, MermaPct = :merma, Estado = 'FINALIZADO'
-                WHERE NroOrdenDesposte = :nro");
+                    CostoPerdidaMerma = :perdidamerma, RendimientoPct = :rend, MermaPct = :merma,
+                    Estado = 'FINALIZADO', CodUsuaCierre = :codusuacierre,
+                    Version = ISNULL(Version, 1) + 1, UltimaModif = SYSUTCDATETIME(), UltimoUsuarioModif = :codusuamod
+                WHERE NroOrdenDesposte = :nro AND Estado = 'EN_PROCESO'");
             $stmtCierreOrd->bindValue(':pesocortes', $ord['PesoTotalCortes'], PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':pesomerma', $ord['PesoMerma'], PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':perdidamerma', $ord['PerdidaMermaDinero'], PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':rend', $ord['RendimientoPct'], PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':merma', $ord['MermaPct'], PDO::PARAM_STR);
+            $stmtCierreOrd->bindValue(':codusuacierre', $codusua, PDO::PARAM_STR);
+            $stmtCierreOrd->bindValue(':codusuamod', $codusua, PDO::PARAM_STR);
             $stmtCierreOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
             $stmtCierreOrd->execute();
+
+            if ($stmtCierreOrd->rowCount() === 0) {
+                throw new RuntimeException("La orden de desposte ya fue finalizada por otro usuario.");
+            }
 
             $stmtUpdEsp = $pdo->prepare("UPDATE ST_Despostadora_RecepcionesDetalle SET EstadoDesposte = 'DESPOSTADO' WHERE NroOrdenDesposte = :nro");
             $stmtUpdEsp->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
@@ -505,7 +494,7 @@ final class DeboningService
         }
     }
 
-    private static function recalculateOrderHeader(PDO $pdo, string $nroOrden): void
+    public static function recalculateOrderWithVersion(PDO $pdo, string $nroOrden, string $codusua): void
     {
         $stmtTot = $pdo->prepare("SELECT CAST(ISNULL(SUM(PesoNeto), 0) AS FLOAT) AS PesoTotal FROM ST_Despostadora_DespostesDetalle WHERE NroOrdenDesposte = :nro");
         $stmtTot->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
@@ -527,20 +516,34 @@ final class DeboningService
 
         $stmtUpd = $pdo->prepare("UPDATE ST_Despostadora_Despostes
                                   SET PesoTotalCortes = :pesocortes, PesoMerma = :pesomerma,
-                                      CostoPerdidaMerma = :perdidamerma, RendimientoPct = :rend, MermaPct = :merma
+                                      CostoPerdidaMerma = :perdidamerma, RendimientoPct = :rend, MermaPct = :merma,
+                                      Version = ISNULL(Version, 1) + 1, UltimaModif = SYSUTCDATETIME(), UltimoUsuarioModif = :codusua
                                   WHERE NroOrdenDesposte = :nro");
         $stmtUpd->bindValue(':pesocortes', $pesoCortes, PDO::PARAM_STR);
         $stmtUpd->bindValue(':pesomerma', $pesoMerma, PDO::PARAM_STR);
         $stmtUpd->bindValue(':perdidamerma', $perdidaMerma, PDO::PARAM_STR);
         $stmtUpd->bindValue(':rend', $rendPct, PDO::PARAM_STR);
         $stmtUpd->bindValue(':merma', $mermaPct, PDO::PARAM_STR);
+        $stmtUpd->bindValue(':codusua', $codusua, PDO::PARAM_STR);
         $stmtUpd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
         $stmtUpd->execute();
     }
 
-    /**
-     * @return list<array<string, mixed>>
-     */
+    public static function updateCutWeight(array $data, string $codusua): array
+    {
+        return DeboningCutsAuditService::updateCutWeight($data, $codusua);
+    }
+
+    public static function getAuditLog(string $nroOrden): array
+    {
+        return DeboningCutsAuditService::getAuditLog($nroOrden);
+    }
+
+    public static function getSyncStatus(string $nroOrden, int $clientVersion): array
+    {
+        return DeboningSyncService::getSyncStatus($nroOrden, $clientVersion);
+    }
+
     /**
      * @return list<array<string, mixed>>
      */

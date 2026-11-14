@@ -54,6 +54,7 @@ function switchView(view) {
     vBoard.style.display = isBoard ? 'block' : 'none';
     vStation.style.display = isBoard ? 'none' : 'block';
     if (isBoard) {
+        if (typeof DeboningSync !== 'undefined') DeboningSync.stop();
         window.history.replaceState({}, '', getBasePath());
         sessionStorage.removeItem('st_active_deboning_order');
         const initialEl = document.getElementById('initialOrderNumber');
@@ -135,6 +136,9 @@ async function loadOrderInStation(nroOrden) {
         }
 
         renderBalanceAndTable(json.balance);
+        if (typeof DeboningSync !== 'undefined' && currentOrder.Estado === 'EN_PROCESO') {
+            DeboningSync.start(currentOrder.Version || 1);
+        }
     } catch (e) {
         showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
     }
@@ -187,6 +191,9 @@ async function registerCutWeight() {
                 currentCutsCatalog.sort((a, b) => (a.NombreCorte || '').localeCompare(b.NombreCorte || '', 'es', { sensitivity: 'base' }));
             }
             renderBalanceAndTable(json.balance);
+            if (typeof DeboningSync !== 'undefined' && json.balance.orden && json.balance.orden.Version) {
+                DeboningSync.setVersion(json.balance.orden.Version);
+            }
         } else {
             playBeep('error');
             showAlert(json.error || 'Error registrando pesaje', 'danger');
@@ -217,6 +224,9 @@ async function deleteCutItem(id) {
                 currentCutsCatalog.sort((a, b) => (a.NombreCorte || '').localeCompare(b.NombreCorte || '', 'es', { sensitivity: 'base' }));
             }
             renderBalanceAndTable(json.balance);
+            if (typeof DeboningSync !== 'undefined' && json.balance.orden && json.balance.orden.Version) {
+                DeboningSync.setVersion(json.balance.orden.Version);
+            }
         } else {
             showAlert(json.error || 'Error eliminando pesaje', 'danger');
         }
@@ -322,11 +332,13 @@ function renderBalanceAndTable(balance) {
         let itemNumHtml = '-';
         let loteHtml = '<span class="badge" style="background:rgba(255,255,255,0.06); color:var(--text-muted); font-size:0.75rem;">Pendiente</span>';
         let deleteBtnHtml = '';
+        let editBtnHtml = '';
 
         if (isWeighed) {
             itemNumHtml = weighed.map(w => `#${w.NroItem}`).join(', ');
             loteHtml = weighed.map(w => `<span class="badge" style="background:#55433a; color:var(--primary); font-family:monospace; font-size:0.8rem; margin-right:2px;" title="${parseFloat(w.PesoNeto).toFixed(4)} kg">${w.NroLote}</span>`).join(' ');
             if (!isFinalized) {
+                editBtnHtml = weighed.map(w => `<button type="button" class="btn btn-outline btn-edit-cut" style="padding:2px 6px; font-size:0.75rem; color:#3498db;" data-id="${w.ID}" data-lote="${w.NroLote}" data-peso="${w.PesoNeto}" data-corte="${cut.NombreCorte}" title="Corregir peso con auditoría">✏️</button>`).join(' ');
                 deleteBtnHtml = weighed.map(w => `<button type="button" class="btn btn-outline btn-delete-cut" style="padding:2px 6px; font-size:0.75rem; color:var(--danger);" data-id="${w.ID}" title="Anular pesaje ${w.NroLote}">&times;</button>`).join(' ');
             }
         }
@@ -349,7 +361,7 @@ function renderBalanceAndTable(balance) {
                 <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:${isWeighed ? 'var(--primary)' : 'var(--text-muted)'};">${isWeighed ? `$${costRealFmt}` : '-'}</td>
                 <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:${isWeighed ? 'var(--success)' : 'var(--text-muted)'};">$${pSugFmt}</td>
                 <td style="padding:0.6rem 0.5rem; text-align:center; font-size:0.75rem; color:var(--text-muted);">${vencFmt}</td>
-                <td style="padding:0.6rem 0.5rem; text-align:center;"><div style="display:flex; gap:0.25rem; justify-content:center; align-items:center;">${assignBtnHtml} ${deleteBtnHtml}</div></td>
+                <td style="padding:0.6rem 0.5rem; text-align:center;"><div style="display:flex; gap:0.25rem; justify-content:center; align-items:center;">${assignBtnHtml} ${editBtnHtml} ${deleteBtnHtml}</div></td>
             `;
             tbody.appendChild(tr);
         }
@@ -368,7 +380,7 @@ function renderBalanceAndTable(balance) {
                 </div>
                 <div class="cut-card-footer">
                     <span class="cut-card-venc"><svg class="icon" viewBox="0 0 24 24" style="width:13px; height:13px; margin-right:4px; vertical-align:-1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>Vence: ${vencFmt}</span>
-                    <div style="display:flex; gap:0.35rem; align-items:center;">${assignBtnHtml} ${deleteBtnHtml}</div>
+                    <div style="display:flex; gap:0.35rem; align-items:center;">${assignBtnHtml} ${editBtnHtml} ${deleteBtnHtml}</div>
                 </div>
             `;
             cardsContainer.appendChild(cardEl);
@@ -440,10 +452,7 @@ async function refreshActiveOrders() {
             json.orders.forEach(ord => {
                 const card = document.createElement('div');
                 card.className = 'card';
-                card.style.borderLeft = '4px solid var(--primary)';
-                card.style.display = 'flex';
-                card.style.flexDirection = 'column';
-                card.style.justifyContent = 'space-between';
+                card.style.cssText = 'border-left: 4px solid var(--primary); display:flex; flex-direction:column; justify-content:space-between;';
                 const mesaBadge = (ord.LineaMesa && ord.LineaMesa.trim() !== '') ? `<span class="badge" style="background:#55433a; color:var(--primary); font-weight:700; font-size:0.8rem;">${ord.LineaMesa}</span>` : '';
                 card.innerHTML = `
                     <div>
@@ -466,8 +475,7 @@ async function refreshActiveOrders() {
                     <button type="button" class="btn btn-primary btn-operate-order" style="width:100%; justify-content:center;" data-order="${ord.NroOrdenDesposte}">
                         <svg class="icon" viewBox="0 0 24 24" style="width:16px; height:16px; margin-right:6px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                         Operar Mesa / Pesar
-                    </button>
-                `;
+                    </button>`;
                 grid.appendChild(card);
             });
         }

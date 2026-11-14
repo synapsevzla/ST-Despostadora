@@ -1,0 +1,92 @@
+/**
+ * ST-Despostadora - Estilos para Colaboración Multi-Usuario y Bitácora en Vivo
+ */
+
+/* Contenedor flotante de avisos táctiles en vivo (Toasts concurrentes) */
+.deboning-live-toasts {
+    position: fixed;
+    top: 75px;
+    right: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 380px;
+    pointer-events: none;
+}
+
+.live-toast {
+    pointer-events: auto;
+    background: rgba(30, 24, 20, 0.95);
+    color: var(--text-primary, #fff);
+    border: 1px solid var(--border-color, #43342d);
+    border-left: 4px solid var(--primary, #eb5e28);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    animation: toastSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.live-toast-success {
+    border-left-color: #2ecc71;
+}
+
+.live-toast-warning {
+    border-left-color: #f39c12;
+}
+
+.live-toast-info {
+    border-left-color: #3498db;
+}
+
+.live-toast.fade-out {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+}
+
+@keyframes toastSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(40px) scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+/* Efecto de destello suave para cortes actualizados por otro usuario */
+.row-updated-flash {
+    animation: cutRowFlash 2.5s ease-out;
+}
+
+@keyframes cutRowFlash {
+    0% {
+        background-color: rgba(235, 94, 40, 0.35) !important;
+        box-shadow: inset 0 0 12px rgba(235, 94, 40, 0.5);
+    }
+    40% {
+        background-color: rgba(235, 94, 40, 0.2) !important;
+    }
+    100% {
+        background-color: transparent;
+    }
+}
+
+/* Timeline y Bitácora */
+.audit-timeline {
+    font-size: 0.85rem;
+}
+
+@media (max-width: 600px) {
+    .deboning-live-toasts {
+        top: 65px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+}

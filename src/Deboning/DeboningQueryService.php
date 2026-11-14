@@ -6,9 +6,91 @@ namespace Src\Deboning;
 use Config\Database;
 use DateTime;
 use PDO;
+use RuntimeException;
 
 final class DeboningQueryService
 {
+    /**
+     * Obtiene el balance y tabla de costeo detallada para la orden.
+     * @param string $nroOrden
+     * @return array<string, mixed>
+     */
+    public static function getYieldAndCosting(string $nroOrden): array
+    {
+        $pdo = Database::getConnection();
+
+        // Sincronizar cruce ERP si la orden está finalizada
+        DeboningErpHoldService::syncDeboningCruceStatus($pdo, $nroOrden);
+
+        $stmtOrd = $pdo->prepare("SELECT d.NroOrdenDesposte, d.NroRecepcion, d.LineaMesa, d.FechaHoraInicio,
+                                         d.CodProdCanal, d.CostActCanal, d.PesoCanalEntrada, d.CostoTotalCanal,
+                                         d.Estado, r.CodUbic,
+                                         d.DocDescargoEnviado, d.DocDescargoNumeroD, d.DocDescargoProcesado,
+                                         d.DocDescargoNumeroDOficial, d.DocDescargoTipoOpIFinal, d.FechaDocDescargoProcesado,
+                                         d.DocCargoEnviado, d.DocCargoNumeroD, d.DocCargoProcesado,
+                                         d.DocCargoNumeroDOficial, d.DocCargoTipoOpIFinal, d.FechaDocCargoProcesado,
+                                         d.EstadoCruceERP,
+                                         CAST(ISNULL(d.Version, 1) AS INT) AS Version,
+                                         d.UltimoUsuarioModif, d.UltimaModif, d.CodUsuaCierre, d.FechaHoraCierre,
+                                         LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal
+                                  FROM ST_Despostadora_Despostes d
+                                  INNER JOIN ST_Despostadora_Recepciones r ON r.NroRecepcion = d.NroRecepcion
+                                  INNER JOIN SAPROD p ON p.CodProd = d.CodProdCanal
+                                  WHERE d.NroOrdenDesposte = :nro");
+        $stmtOrd->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
+        $stmtOrd->execute();
+        $ord = $stmtOrd->fetch(PDO::FETCH_ASSOC);
+
+        if (!$ord) {
+            throw new RuntimeException("La orden '{$nroOrden}' no existe.");
+        }
+
+        $pesoCanal = (float)$ord['PesoCanalEntrada'];
+        $costActCanal = (float)$ord['CostActCanal'];
+
+        $stmtCuts = $pdo->prepare("SELECT det.ID, det.NroItem, det.NroLote, det.CodProdCorte,
+                                          CAST(det.PesoNeto AS FLOAT) AS PesoNeto,
+                                          CAST(det.CostActBase AS FLOAT) AS CostActBase,
+                                          CAST(det.MargenUtilidadPct AS FLOAT) AS MargenUtilidadPct,
+                                          det.FechaElaboracion, det.FechaVencimiento,
+                                          det.CodUsuaCreacion, det.CodUsuaModif, det.FechaHoraCreacion, det.FechaHoraModif,
+                                          LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCorte,
+                                          p.Unidad
+                                   FROM ST_Despostadora_DespostesDetalle det
+                                   INNER JOIN SAPROD p ON p.CodProd = det.CodProdCorte
+                                   WHERE det.NroOrdenDesposte = :nro
+                                   ORDER BY det.NroItem ASC");
+        $stmtCuts->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
+        $stmtCuts->execute();
+        $cuts = $stmtCuts->fetchAll(PDO::FETCH_ASSOC);
+
+        $computed = YieldCalculator::compute($pesoCanal, $costActCanal, $cuts);
+
+        return [
+            'orden' => array_merge($ord, [
+                'PesoCanalEntrada' => $pesoCanal,
+                'CostActCanal' => $costActCanal,
+                'CostoTotalCanal' => round($pesoCanal * $costActCanal, 4),
+                'PesoTotalCortes' => $computed['PesoTotalCortes'],
+                'PesoMerma' => $computed['PesoMerma'],
+                'PerdidaMermaDinero' => $computed['PerdidaMermaDinero'],
+                'RendimientoPct' => $computed['RendimientoPct'],
+                'MermaPct' => $computed['MermaPct'],
+                'DescuadreFisico' => $computed['DescuadreFisico']
+            ]),
+            'cortes' => $computed['Cortes'],
+            'especie_cortes' => ConfigService::getSpeciesCuts((string)$ord['CodProdCanal']),
+            'totales' => [
+                'PesoCanal' => $pesoCanal,
+                'PesoCortes' => $computed['PesoTotalCortes'],
+                'PesoMerma' => $computed['PesoMerma'],
+                'CostoTotalCanal' => round($pesoCanal * $costActCanal, 4),
+                'TotalCostoRealCortes' => $computed['TotalCostoRealCortes'],
+                'RendimientoGlobalPct' => $computed['RendimientoPct'],
+                'MermaGlobalPct' => $computed['MermaPct']
+            ]
+        ];
+    }
     /**
      * Obtiene el listado de órdenes activas (EN_PROCESO) para el tablero en vivo.
      * @return list<array<string, mixed>>

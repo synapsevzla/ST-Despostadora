@@ -18,6 +18,8 @@ require_once __DIR__ . '/../src/Deboning/ReceptionService.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionController.php';
 require_once __DIR__ . '/../src/Deboning/YieldCalculator.php';
 require_once __DIR__ . '/../src/Deboning/DeboningErpHoldService.php';
+require_once __DIR__ . '/../src/Deboning/DeboningCutsAuditService.php';
+require_once __DIR__ . '/../src/Deboning/DeboningSyncService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningQueryService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningController.php';
@@ -188,6 +190,20 @@ try {
 
     case '/api/desposte/balance':
         DeboningController::balance();
+        break;
+
+    case '/api/desposte/sync':
+        DeboningController::sync();
+        break;
+
+    case '/api/desposte/modificar-corte':
+        if ($requestMethod === 'POST') {
+            DeboningController::updateCutWeight();
+        }
+        break;
+
+    case '/api/desposte/bitacora':
+        DeboningController::auditLog();
         break;
 
     case '/api/desposte/erp-status':

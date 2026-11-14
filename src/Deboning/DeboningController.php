@@ -344,4 +344,102 @@ final class DeboningController
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Endpoint API para sincronización en tiempo real (Smart Delta Polling).
+     */
+    public static function sync(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $nroOrden = trim((string)($_GET['nro_orden'] ?? ''));
+            $version = isset($_GET['version']) ? (int)$_GET['version'] : 0;
+
+            if ($nroOrden === '') {
+                echo json_encode(['success' => false, 'error' => 'Nro de orden requerido.']);
+                return;
+            }
+
+            $result = DeboningService::getSyncStatus($nroOrden, $version);
+            echo json_encode($result);
+        } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para modificar el peso de un corte existente con trazabilidad.
+     */
+    public static function updateCutWeight(): void
+    {
+        $user = AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Security::validateCsrfToken($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o expirado.']);
+            return;
+        }
+
+        try {
+            $nroOrden = trim((string)($_POST['nro_orden'] ?? ''));
+            $id = (int)($_POST['id'] ?? 0);
+            $nuevoPeso = round((float)($_POST['nuevo_peso'] ?? 0.0), 4);
+            $motivo = trim((string)($_POST['motivo'] ?? ''));
+
+            $result = DeboningService::updateCutWeight([
+                'nro_orden' => $nroOrden,
+                'id' => $id,
+                'nuevo_peso' => $nuevoPeso,
+                'motivo' => $motivo
+            ], $user['codusua']);
+
+            $balance = DeboningService::getYieldAndCosting($nroOrden);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Peso del lote {$result['nro_lote']} actualizado a {$result['peso_nuevo']} kg.",
+                'cut' => $result,
+                'balance' => $balance
+            ]);
+        } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para consultar la bitácora inmutable de trazabilidad de pesajes.
+     */
+    public static function auditLog(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $nroOrden = trim((string)($_GET['nro_orden'] ?? ''));
+            if ($nroOrden === '') {
+                echo json_encode(['success' => false, 'error' => 'Nro de orden requerido.']);
+                return;
+            }
+
+            $log = DeboningService::getAuditLog($nroOrden);
+            echo json_encode(['success' => true, 'log' => $log]);
+        } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
 }

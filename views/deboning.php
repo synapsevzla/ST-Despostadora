@@ -419,15 +419,20 @@ ob_start();
     <!-- Barra superior de la estación -->
     <div class="card station-top-bar" style="margin-bottom:1rem; padding:0.85rem 1.25rem; background:linear-gradient(135deg, #43342d 0%, #4e3d36 100%);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
-            <div>
+            <div style="display:flex; align-items:center; flex-wrap:wrap; gap:0.4rem;">
                 <span class="badge" id="stationMesaBadge" style="background:var(--primary); color:#fff; font-weight:700; font-size:0.85rem; display:none;"></span>
-                <span style="font-size:1.15rem; font-weight:700; margin-left:0.5rem; color:var(--text-primary);" id="stationOrderTitle">DESP-0000000000000001</span>
-                <span style="font-size:0.9rem; color:var(--text-secondary); margin-left:0.75rem;" id="stationCanalSubtitle">Novillo Especial (CARNEC)</span>
-                <button type="button" class="btn btn-outline" id="btnStationErpDocs" data-action="show-erp-docs-station" style="display:none; margin-left:0.75rem; padding:0.25rem 0.6rem; font-size:0.75rem; align-items:center; gap:5px;" title="Ver detalle de documentos de espera y oficiales en Saint ERP">
+                <span style="font-size:1.15rem; font-weight:700; color:var(--text-primary);" id="stationOrderTitle">DESP-0000000000000001</span>
+                <span style="font-size:0.9rem; color:var(--text-secondary);" id="stationCanalSubtitle">Novillo Especial (CARNEC)</span>
+                <span id="stationSyncBadge" class="badge" style="font-size:0.75rem; background:rgba(46,204,113,0.15); color:#2ecc71;" title="Estado de sincronización en vivo entre usuarios">🟢 Sincronizado</span>
+                <button type="button" class="btn btn-outline" id="btnStationErpDocs" data-action="show-erp-docs-station" style="display:none; padding:0.25rem 0.6rem; font-size:0.75rem; align-items:center; gap:5px;" title="Ver detalle de documentos de espera y oficiales en Saint ERP">
                     <span>🔗 Cruce ERP:</span> <span id="stationErpBadge" class="badge" style="font-size:0.7rem;">CONSULTANDO</span>
                 </button>
             </div>
-            <div style="display:flex; gap:0.5rem;">
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button type="button" class="btn btn-outline" id="btnStationAuditLog" data-action="show-audit-log" style="font-size:0.78rem; padding:0.35rem 0.7rem; align-items:center; gap:5px;" title="Ver bitácora y trazabilidad de pesajes de esta mesa">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:14px; height:14px; stroke:var(--primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    Bitácora
+                </button>
                 <button type="button" class="btn btn-outline" data-action="view-board">
                     ← Volver al Tablero
                 </button>
@@ -438,6 +443,9 @@ ob_start();
             </div>
         </div>
     </div>
+
+    <!-- Contenedor flotante de avisos en tiempo real (Toasts concurrentes) -->
+    <div id="deboningLiveToasts" class="deboning-live-toasts"></div>
 
     <!-- Indicador de Descuadre Físico (oculto por defecto) -->
     <div id="descuadreAlert" class="alert alert-danger" style="display:none; margin-bottom:1rem; font-weight:700; font-size:0.95rem; border:2px solid #ff3b30;">
@@ -508,66 +516,18 @@ ob_start();
     </div>
 </div>
 
-<!-- MODAL: CALCULADORA Y PESAJE TÁCTIL DE CORTE -->
-<div id="modalWeighCalculator" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(20,15,12,0.85); z-index:100; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(4px);">
-    <div class="card" style="width:100%; max-width:440px; box-shadow:0 16px 40px rgba(0,0,0,0.7); border:1px solid var(--border-color); padding:1.25rem;">
-        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.85rem; margin-bottom:0.75rem; position:relative;">
-            <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Corte Seleccionado:</div>
-            <div id="selectedCutDisplay" style="font-size:1.1rem; font-weight:700; color:var(--primary); margin-top:2px; padding-right:1.5rem;">
-                Ninguno seleccionado
-            </div>
-            <button type="button" class="btn btn-outline" data-action="close-modal-weigh" style="position:absolute; top:8px; right:8px; padding:0 6px; font-size:1.2rem; line-height:1.2; border:none; color:var(--text-muted);" title="Cerrar">&times;</button>
-        </div>
-
-        <div id="modalWeighAlert" class="alert alert-danger" style="display:none; margin-bottom:0.75rem; padding:0.5rem 0.75rem; font-size:0.85rem;"></div>
-
-        <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
-            <svg class="icon" viewBox="0 0 24 24" style="width:16px; height:16px; stroke:var(--primary);"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-            Peso Neto (Balanza / Táctil)
-        </div>
-
-        <div class="weigh-input-wrapper" style="margin-bottom:0.75rem;">
-            <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="weighInput" class="weigh-input" placeholder="0.0000" autocomplete="off" style="font-size:1.6rem; text-align:right; font-weight:800; font-family:monospace;">
-            <span class="weigh-unit-badge">kg</span>
-        </div>
-
-        <div id="keypadContainer" class="keypad-grid" style="margin-bottom:0.85rem;">
-            <button type="button" class="btn btn-secondary keypad-btn" data-key="7">7</button><button type="button" class="btn btn-secondary keypad-btn" data-key="8">8</button><button type="button" class="btn btn-secondary keypad-btn" data-key="9">9</button>
-            <button type="button" class="btn btn-secondary keypad-btn" data-key="4">4</button><button type="button" class="btn btn-secondary keypad-btn" data-key="5">5</button><button type="button" class="btn btn-secondary keypad-btn" data-key="6">6</button>
-            <button type="button" class="btn btn-secondary keypad-btn" data-key="1">1</button><button type="button" class="btn btn-secondary keypad-btn" data-key="2">2</button><button type="button" class="btn btn-secondary keypad-btn" data-key="3">3</button>
-            <button type="button" class="btn btn-secondary keypad-btn" data-key="C" style="background:#5c352a; color:#ff9d80;">C</button><button type="button" class="btn btn-secondary keypad-btn" data-key="0">0</button><button type="button" class="btn btn-secondary keypad-btn" data-key=".">.</button>
-        </div>
-
-        <div style="display:flex; gap:0.5rem;">
-            <button type="button" class="btn btn-outline" data-action="close-modal-weigh" style="flex:1; justify-content:center; height:46px;">
-                Cancelar
-            </button>
-            <button type="button" class="btn btn-primary" id="btnRegisterCut" style="flex:2; justify-content:center; height:46px; font-size:1.05rem; font-weight:700;">
-                <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; margin-right:6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                REGISTRAR CORTE
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- MODAL: CONFIRMACIÓN DE CIERRE DEFINITIVO DE DESPOSTE -->
-<div id="modalCloseOrder" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(20,15,12,0.8); z-index:100; align-items:center; justify-content:center; padding:1.5rem; backdrop-filter:blur(3px);">
-    <div class="card" style="width:100%; max-width:540px; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
-        <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin-bottom:0.75rem;">Confirmar Cierre de Orden de Desposte</h2>
-        <p style="color:var(--text-secondary); font-size:0.9rem; line-height:1.5; margin-bottom:1rem;">
-            Al confirmar, se registrarán internamente los lotes y costos reales, y se emitirán en espera los <strong>documentos de descargo (canal) y cargo (cortes)</strong> hacia el ERP Saint.
-        </p>
-        <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
-            <button type="button" class="btn btn-outline" data-action="close-modal-close-order">Cancelar</button>
-            <button type="button" class="btn btn-danger" id="btnConfirmCloseOrder">Confirmar y Cerrar Desposte</button>
-        </div>
-    </div>
-</div>
-
+<?php require __DIR__ . '/modal_deboning_weigh.php'; ?>
+<?php require __DIR__ . '/modal_deboning_edit_cut.php'; ?>
+<?php require __DIR__ . '/modal_deboning_close.php'; ?>
+<?php require __DIR__ . '/modal_deboning_closed_notice.php'; ?>
 <?php require __DIR__ . '/modal_erp_docs.php'; ?>
+<?php require __DIR__ . '/modal_deboning_audit.php'; ?>
 
 <link rel="stylesheet" href="/css/deboning.css">
+<link rel="stylesheet" href="/css/deboning_multiuser.css">
 <script src="/js/deboning.js"></script>
+<script src="/js/deboning_sync.js"></script>
+<script src="/js/deboning_audit.js"></script>
 <script src="/js/deboning_erp_modal.js"></script>
 
 <?php
