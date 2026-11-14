@@ -103,9 +103,26 @@
         }
 
         if (descTipoFinalEl) {
-            descTipoFinalEl.textContent = descProc ? `${descTipoFinal} (Descargo de Inventario)` : (descTipoFinal ? `${descTipoFinal} (Errado)` : '-');
+            if (descProc) {
+                descTipoFinalEl.textContent = `${descTipoFinal} (Descargo de Inventario Oficial)`;
+                descTipoFinalEl.style.color = 'var(--success)';
+            } else if (descTipoFinal && descTipoFinal !== 'R' && descTipoFinal !== 'P') {
+                descTipoFinalEl.textContent = `${descTipoFinal} (⚠️ Errado en ERP, se esperaba 'P')`;
+                descTipoFinalEl.style.color = '#ff5252';
+            } else {
+                descTipoFinalEl.textContent = 'En Espera (pendiente por procesar en Saint)';
+                descTipoFinalEl.style.color = 'var(--text-muted)';
+            }
         }
-        if (descFechaEl) descFechaEl.textContent = descFecha;
+        if (descFechaEl) {
+            if (descProc && data.FechaDocDescargoProcesado) {
+                descFechaEl.textContent = String(data.FechaDocDescargoProcesado).substring(0, 16);
+                descFechaEl.style.color = 'var(--text-primary)';
+            } else {
+                descFechaEl.textContent = 'Pendiente (se fijará al procesar en Saint)';
+                descFechaEl.style.color = 'var(--text-muted)';
+            }
+        }
 
         // 2. Cargo de Cortes
         const cargEnviado = data.DocCargoEnviado == 1;
@@ -147,9 +164,26 @@
         }
 
         if (cargTipoFinalEl) {
-            cargTipoFinalEl.textContent = cargProc ? `${cargTipoFinal} (Cargo de Inventario)` : (cargTipoFinal ? `${cargTipoFinal} (Errado)` : '-');
+            if (cargProc) {
+                cargTipoFinalEl.textContent = `${cargTipoFinal} (Cargo de Inventario Oficial)`;
+                cargTipoFinalEl.style.color = 'var(--success)';
+            } else if (cargTipoFinal && cargTipoFinal !== 'R' && cargTipoFinal !== 'O') {
+                cargTipoFinalEl.textContent = `${cargTipoFinal} (⚠️ Errado en ERP, se esperaba 'O')`;
+                cargTipoFinalEl.style.color = '#ff5252';
+            } else {
+                cargTipoFinalEl.textContent = 'En Espera (pendiente por procesar en Saint)';
+                cargTipoFinalEl.style.color = 'var(--text-muted)';
+            }
         }
-        if (cargFechaEl) cargFechaEl.textContent = cargFecha;
+        if (cargFechaEl) {
+            if (cargProc && data.FechaDocCargoProcesado) {
+                cargFechaEl.textContent = String(data.FechaDocCargoProcesado).substring(0, 16);
+                cargFechaEl.style.color = 'var(--text-primary)';
+            } else {
+                cargFechaEl.textContent = 'Pendiente (se fijará al procesar en Saint)';
+                cargFechaEl.style.color = 'var(--text-muted)';
+            }
+        }
     }
 
     async function fetchAndShowErpDocs(nroOrden) {

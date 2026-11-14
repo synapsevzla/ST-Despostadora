@@ -432,15 +432,19 @@ final class DeboningErpHoldService
                 $estadoCruce = 'AMBOS_EN_ESPERA';
             }
 
+            // Solo se fijan número oficial, tipo final y fecha si la operación fue procesada en Saint o si tiene error
+            $guardarDescOfic = ($descargoOk || $descargoErr);
+            $guardarCargOfic = ($cargoOk || $cargoErr);
+
             $stmtUpd->bindValue(':proc_desc', $descargoOk ? 1 : 0, PDO::PARAM_INT);
-            $stmtUpd->bindValue(':num_desc_ofic', $numDescOfic !== '' ? $numDescOfic : null, $numDescOfic !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
-            $stmtUpd->bindValue(':tipo_desc_ofic', $tipoDesc !== '' ? $tipoDesc : null, $tipoDesc !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
-            $stmtUpd->bindValue(':f_desc_ofic', $fDescOfic, $fDescOfic !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtUpd->bindValue(':num_desc_ofic', ($guardarDescOfic && $numDescOfic !== '') ? $numDescOfic : null, ($guardarDescOfic && $numDescOfic !== '') ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtUpd->bindValue(':tipo_desc_ofic', $guardarDescOfic ? ($tipoDesc !== '' ? $tipoDesc : null) : null, ($guardarDescOfic && $tipoDesc !== '') ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtUpd->bindValue(':f_desc_ofic', $guardarDescOfic ? $fDescOfic : null, ($guardarDescOfic && $fDescOfic !== null) ? PDO::PARAM_STR : PDO::PARAM_NULL);
 
             $stmtUpd->bindValue(':proc_carg', $cargoOk ? 1 : 0, PDO::PARAM_INT);
-            $stmtUpd->bindValue(':num_carg_ofic', $numCargOfic !== '' ? $numCargOfic : null, $numCargOfic !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
-            $stmtUpd->bindValue(':tipo_carg_ofic', $tipoCarg !== '' ? $tipoCarg : null, $tipoCarg !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
-            $stmtUpd->bindValue(':f_carg_ofic', $fCargOfic, $fCargOfic !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtUpd->bindValue(':num_carg_ofic', ($guardarCargOfic && $numCargOfic !== '') ? $numCargOfic : null, ($guardarCargOfic && $numCargOfic !== '') ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtUpd->bindValue(':tipo_carg_ofic', $guardarCargOfic ? ($tipoCarg !== '' ? $tipoCarg : null) : null, ($guardarCargOfic && $tipoCarg !== '') ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtUpd->bindValue(':f_carg_ofic', $guardarCargOfic ? $fCargOfic : null, ($guardarCargOfic && $fCargOfic !== null) ? PDO::PARAM_STR : PDO::PARAM_NULL);
 
             $stmtUpd->bindValue(':est_cruce', $estadoCruce, PDO::PARAM_STR);
             $stmtUpd->bindValue(':nro', $r['NroOrdenDesposte'], PDO::PARAM_STR);
