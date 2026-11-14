@@ -28,11 +28,11 @@ ob_start();
             </div>
             <a href="/recepcion/nueva" class="btn btn-secondary" style="text-decoration: none; padding: 0.6rem 1rem;">
                 <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                + Nueva Recepción
+                Nueva Recepción
             </a>
             <a href="/desposte/nueva" class="btn btn-primary" style="text-decoration: none; padding: 0.6rem 1rem;">
                 <svg class="icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                + Iniciar Desposte
+                Iniciar Desposte
             </a>
         </div>
     </div>
