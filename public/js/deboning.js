@@ -5,7 +5,9 @@
 let currentOrder = null;
 let selectedCutCode = null;
 let currentCutsCatalog = [];
-const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+const getCsrfToken = () => document.querySelector('input[name="csrf_token"]')?.value
+    || document.getElementById('csrfToken')?.value
+    || '';
 
 // Feedback sonoro nativo con Web Audio API
 const audioCtx = (typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined')
@@ -27,11 +29,19 @@ function playBeep(type = 'success') {
 
 function showAlert(message, type = 'success') {
     const el = document.getElementById('deboningAlert');
-    if (!el) return;
-    el.className = `alert alert-${type}`;
-    el.textContent = message;
-    el.style.display = 'block';
-    if (type === 'success') setTimeout(() => { el.style.display = 'none'; }, 4000);
+    if (el) {
+        el.className = `alert alert-${type}`;
+        el.textContent = message;
+        el.style.display = 'block';
+        if (type === 'success') setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+    const modalAlert = document.getElementById('modalWeighAlert');
+    if (modalAlert) {
+        modalAlert.className = `alert alert-${type}`;
+        modalAlert.textContent = message;
+        modalAlert.style.display = 'block';
+        if (type === 'success') setTimeout(() => { modalAlert.style.display = 'none'; }, 4000);
+    }
 }
 
 const getBasePath = () => window.location.pathname.startsWith('/desposte') ? '/desposte' : '/deboning';
@@ -67,13 +77,17 @@ function pressKeypad(key) {
 function openWeighModal(corte) {
     if (!corte) return;
     selectedCutCode = corte.CodProdCorte;
-    document.querySelectorAll('.cut-table-row').forEach(r => r.classList.toggle('selected', r.dataset.code === corte.CodProdCorte));
-    document.querySelectorAll('.cut-item-card').forEach(c => c.classList.toggle('selected', c.dataset.code === corte.CodProdCorte));
+    const codeTrim = String(corte.CodProdCorte).trim();
+    document.querySelectorAll('.cut-table-row').forEach(r => r.classList.toggle('selected', String(r.dataset.code).trim() === codeTrim));
+    document.querySelectorAll('.cut-item-card').forEach(c => c.classList.toggle('selected', String(c.dataset.code).trim() === codeTrim));
 
     const disp = document.getElementById('selectedCutDisplay');
     if (disp) {
         disp.textContent = `${corte.NombreCorte} (${corte.CodProdCorte}) - Venc: ${corte.DiasVencimiento || 30} días`;
     }
+
+    const modalAlert = document.getElementById('modalWeighAlert');
+    if (modalAlert) modalAlert.style.display = 'none';
 
     const modal = document.getElementById('modalWeighCalculator');
     if (modal) modal.style.display = 'flex';
@@ -86,6 +100,8 @@ function openWeighModal(corte) {
 }
 
 function closeWeighModal() {
+    const modalAlert = document.getElementById('modalWeighAlert');
+    if (modalAlert) modalAlert.style.display = 'none';
     const modal = document.getElementById('modalWeighCalculator');
     if (modal) modal.style.display = 'none';
 }
@@ -153,7 +169,7 @@ async function registerCutWeight() {
     btn.textContent = 'REGISTRANDO...';
 
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', getCsrfToken());
     formData.append('nro_orden', currentOrder.NroOrdenDesposte);
     formData.append('codprod_corte', selectedCutCode);
     formData.append('peso_neto', peso.toFixed(4));
@@ -186,7 +202,7 @@ async function registerCutWeight() {
 async function deleteCutItem(id) {
     if (!confirm('¿Confirma que desea anular este pesaje de corte?')) return;
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', getCsrfToken());
     formData.append('nro_orden', currentOrder.NroOrdenDesposte);
     formData.append('id', id.toString());
 
@@ -236,9 +252,10 @@ function renderBalanceAndTable(balance) {
     // Lista combinada de cortes de la especie ordenada alfabéticamente
     const allCuts = [...currentCutsCatalog];
     cortesPesados.forEach(cp => {
-        if (!allCuts.some(c => c.CodProdCorte === cp.CodProdCorte)) {
+        const cpCodeTrim = String(cp.CodProdCorte).trim();
+        if (!allCuts.some(c => String(c.CodProdCorte).trim() === cpCodeTrim)) {
             allCuts.push({
-                CodProdCorte: cp.CodProdCorte,
+                CodProdCorte: cpCodeTrim,
                 NombreCorte: cp.NombreCorte,
                 DiasVencimiento: 30,
                 CostActBase: cp.CostActBase,
@@ -247,6 +264,7 @@ function renderBalanceAndTable(balance) {
         }
     });
     allCuts.sort((a, b) => (a.NombreCorte || '').localeCompare(b.NombreCorte || '', 'es', { sensitivity: 'base' }));
+    currentCutsCatalog = allCuts;
 
     const tbody = document.getElementById('cutsTableBody');
     const cardsContainer = document.getElementById('cutsCardsContainer');
@@ -260,9 +278,10 @@ function renderBalanceAndTable(balance) {
     if (cardsContainer) cardsContainer.innerHTML = '';
 
     allCuts.forEach(cut => {
-        const weighed = cortesPesados.filter(p => p.CodProdCorte === cut.CodProdCorte);
+        const cutCodeTrim = String(cut.CodProdCorte).trim();
+        const weighed = cortesPesados.filter(p => String(p.CodProdCorte).trim() === cutCodeTrim);
         const isWeighed = (weighed.length > 0);
-        const isSelected = (selectedCutCode === cut.CodProdCorte);
+        const isSelected = (selectedCutCode && String(selectedCutCode).trim() === cutCodeTrim);
         const totalPeso = weighed.reduce((s, w) => s + parseFloat(w.PesoNeto || 0), 0);
         const totalRend = weighed.reduce((s, w) => s + parseFloat(w.RendimientoPct || 0), 0);
 
@@ -353,7 +372,7 @@ async function executeCloseOrder() {
     btn.textContent = 'Procesando cierre atómico...';
 
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', getCsrfToken());
     formData.append('nro_orden', currentOrder.NroOrdenDesposte);
 
     try {
@@ -471,21 +490,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const btnAssign = e.target.closest('.btn-assign-cut');
         if (btnAssign && btnAssign.dataset.code) {
-            const cut = currentCutsCatalog.find(c => c.CodProdCorte === btnAssign.dataset.code);
+            const cut = currentCutsCatalog.find(c => String(c.CodProdCorte).trim() === String(btnAssign.dataset.code).trim());
             if (cut) openWeighModal(cut);
             return;
         }
 
         const cutRow = e.target.closest('.cut-table-row');
         if (cutRow && cutRow.dataset.code && !e.target.closest('.btn-delete-cut') && !e.target.closest('.btn-assign-cut')) {
-            const cut = currentCutsCatalog.find(c => c.CodProdCorte === cutRow.dataset.code);
+            const cut = currentCutsCatalog.find(c => String(c.CodProdCorte).trim() === String(cutRow.dataset.code).trim());
             if (cut) openWeighModal(cut);
             return;
         }
 
         const cutCard = e.target.closest('.cut-item-card');
         if (cutCard && cutCard.dataset.code && !e.target.closest('.btn-delete-cut') && !e.target.closest('.btn-assign-cut')) {
-            const cut = currentCutsCatalog.find(c => c.CodProdCorte === cutCard.dataset.code);
+            const cut = currentCutsCatalog.find(c => String(c.CodProdCorte).trim() === String(cutCard.dataset.code).trim());
             if (cut) openWeighModal(cut);
             return;
         }

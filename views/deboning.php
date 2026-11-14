@@ -8,6 +8,7 @@ $bodyClass = $isStationInitial ? 'station-active' : '';
 ob_start();
 ?>
 <input type="hidden" id="initialOrderNumber" value="<?= Security::escape($initialOrder) ?>">
+<input type="hidden" name="csrf_token" id="csrfToken" value="<?= Security::escape($csrf_token ?? '') ?>">
 <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
     <div>
         <h1 class="page-title" style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin:0;">
@@ -529,6 +530,8 @@ ob_start();
             </div>
             <button type="button" class="btn btn-outline" data-action="close-modal-weigh" style="position:absolute; top:8px; right:8px; padding:0 6px; font-size:1.2rem; line-height:1.2; border:none; color:var(--text-muted);" title="Cerrar">&times;</button>
         </div>
+
+        <div id="modalWeighAlert" class="alert alert-danger" style="display:none; margin-bottom:0.75rem; padding:0.5rem 0.75rem; font-size:0.85rem;"></div>
 
         <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
             <svg class="icon" viewBox="0 0 24 24" style="width:16px; height:16px; stroke:var(--primary);"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
