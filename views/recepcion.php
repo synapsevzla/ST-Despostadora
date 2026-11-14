@@ -76,7 +76,8 @@ ob_start();
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div style="overflow-x: auto;">
+            <!-- Vista de Tabla para Escritorio -->
+            <div class="responsive-table-desktop" style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                     <thead>
                         <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
@@ -153,6 +154,86 @@ ob_start();
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Vista de Tarjetas Táctiles para Móviles / Tablets / POS 800x600 -->
+            <div class="responsive-cards-mobile" id="recepcionesCardsContainer">
+                <?php foreach ($receptions as $rec): ?>
+                    <?php 
+                        $statusClass = strtolower(str_replace('_', '-', (string)$rec['Estado']));
+                        $dispKg = (float)$rec['PesoDisponible'];
+                    ?>
+                    <div class="data-card status-<?= $statusClass ?>">
+                        <div class="data-card-header">
+                            <span class="data-card-code"><?= Security::escape($rec['NroRecepcion']) ?></span>
+                            <div class="data-card-badges">
+                                <?php if ($rec['Estado'] === 'DISPONIBLE'): ?>
+                                    <span class="badge badge-success">DISPONIBLE</span>
+                                <?php elseif ($rec['Estado'] === 'EN_PROCESO'): ?>
+                                    <span class="badge badge-warning">EN DESPOSTE</span>
+                                <?php else: ?>
+                                    <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); border: 1px solid var(--border-color);"><?= Security::escape($rec['Estado']) ?></span>
+                                <?php endif; ?>
+
+                                <?php if ($rec['MetodoEntrada'] === 'SOLO_PESO'): ?>
+                                    <span class="badge" style="background: rgba(193, 218, 198, 0.15); color: var(--success); font-size: 0.7rem;">GLOBAL</span>
+                                <?php elseif ($rec['MetodoEntrada'] === 'PESO_CANTIDAD'): ?>
+                                    <span class="badge" style="background: rgba(216, 134, 94, 0.15); color: var(--accent); font-size: 0.7rem;">LOTE</span>
+                                <?php else: ?>
+                                    <span class="badge badge-warning" style="font-size: 0.7rem;">INDIVIDUAL</span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="data-card-title">
+                            <?= Security::escape($rec['NombreCanal']) ?>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">[<?= Security::escape($rec['CodProdCanal']) ?>]</span>
+                        </div>
+
+                        <div class="data-card-sub">
+                            <span>📅 <?= Security::escape(substr((string)$rec['FechaHora'], 0, 16)) ?></span>
+                            <?php if ((int)$rec['CantidadEspecies'] > 0): ?>
+                                <span>• 🥩 <?= (int)$rec['CantidadEspecies'] ?> piezas</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="data-card-grid cols-4">
+                            <div class="data-metric">
+                                <span class="data-metric-label">Peso Neto</span>
+                                <span class="data-metric-val val-primary"><?= number_format((float)$rec['PesoTotalNeto'], 2) ?> <small><?= Security::escape($rec['Unidad']) ?></small></span>
+                            </div>
+                            <div class="data-metric">
+                                <span class="data-metric-label">Disponible</span>
+                                <span class="data-metric-val <?= $dispKg > 0 ? 'val-success' : '' ?>" style="<?= $dispKg <= 0 ? 'color: var(--text-muted);' : '' ?>">
+                                    <?= number_format($dispKg, 2) ?> <small><?= Security::escape($rec['Unidad']) ?></small>
+                                </span>
+                            </div>
+                            <div class="data-metric">
+                                <span class="data-metric-label">Costo ERP/kg</span>
+                                <span class="data-metric-val">$<?= number_format((float)$rec['CostActCanal'], 2) ?></span>
+                            </div>
+                            <div class="data-metric">
+                                <span class="data-metric-label">Total Inversión</span>
+                                <span class="data-metric-val">$<?= number_format((float)$rec['CostoTotalNeto'], 2) ?></span>
+                            </div>
+                        </div>
+
+                        <div class="data-card-footer">
+                            <?php if ($rec['MetodoEntrada'] === 'PESO_INDIVIDUAL'): ?>
+                                <button type="button" class="btn btn-outline btn-ver-piezas data-card-btn" data-nrorec="<?= Security::escape($rec['NroRecepcion']) ?>">
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                                    Ver Reses (<?= (int)$rec['CantidadEspecies'] ?>)
+                                </button>
+                            <?php endif; ?>
+                            <?php if ($dispKg > 0): ?>
+                                <a href="/desposte/nueva?especie=<?= urlencode((string)$rec['CodProdCanal']) ?>" class="btn btn-primary data-card-btn" style="text-decoration: none;">
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    Despostar Saldo
+                                </a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
 
             <!-- Controles de Paginación -->

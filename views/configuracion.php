@@ -94,7 +94,7 @@ ob_start();
 
     <!-- SECCIÓN 2: Correlativos del Sistema -->
     <div id="tab-correlativos" class="config-tab-panel" style="display: none;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem;">
             <?php foreach ($correlatives as $corr): ?>
                 <div class="card" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; position: relative;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
@@ -285,7 +285,7 @@ ob_start();
 
     <!-- SECCIÓN 4: Líneas y Mesas de Desposte -->
     <div id="tab-mesas" class="config-tab-panel" style="display: none;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1.5rem;">
             
             <!-- Formulario para Crear / Editar Mesa -->
             <div class="card">

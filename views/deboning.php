@@ -166,7 +166,8 @@ ob_start();
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div style="overflow-x: auto;">
+            <!-- Vista de Tabla para Escritorio -->
+            <div class="responsive-table-desktop" style="overflow-x: auto;">
                 <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem;">
                     <thead>
                         <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em;">
@@ -244,6 +245,78 @@ ob_start();
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Vista de Tarjetas Táctiles para Móviles / Tablets / POS 800x600 -->
+            <div class="responsive-cards-mobile" id="ordersCardsContainer">
+                <?php foreach ($orders as $o): ?>
+                    <?php 
+                        $statusClass = strtolower(str_replace('_', '-', (string)$o['Estado']));
+                        $isProcess = $o['Estado'] === 'EN_PROCESO';
+                    ?>
+                    <div class="data-card status-<?= $statusClass ?>">
+                        <div class="data-card-header">
+                            <span class="data-card-code"><?= Security::escape($o['NroOrdenDesposte']) ?></span>
+                            <div class="data-card-badges">
+                                <?php if (!empty(trim((string)$o['LineaMesa']))): ?>
+                                    <span class="badge" style="background: #55433a; color: var(--text-primary); font-size: 0.7rem;">
+                                        <?= Security::escape($o['LineaMesa']) ?>
+                                    </span>
+                                <?php endif; ?>
+                                <?php if ($isProcess): ?>
+                                    <span class="badge badge-success">EN PROCESO</span>
+                                <?php elseif ($o['Estado'] === 'FINALIZADO'): ?>
+                                    <span class="badge" style="background: rgba(193, 218, 198, 0.15); color: var(--success); font-size: 0.7rem;">FINALIZADO</span>
+                                <?php else: ?>
+                                    <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;"><?= Security::escape($o['Estado']) ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+
+                        <div class="data-card-title">
+                            <?= Security::escape($o['NombreCanal']) ?>
+                            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">[<?= Security::escape($o['CodProdCanal']) ?>]</span>
+                        </div>
+
+                        <div class="data-card-sub">
+                            <span>📅 <?= Security::escape(substr((string)$o['FechaHoraInicio'], 0, 16)) ?></span>
+                            <?php if (!empty($o['NroRecepcion'])): ?>
+                                <span>• 📥 Rec: <?= Security::escape($o['NroRecepcion']) ?></span>
+                            <?php endif; ?>
+                        </div>
+
+                        <div class="data-card-grid cols-4">
+                            <div class="data-metric">
+                                <span class="data-metric-label">Canal Entrada</span>
+                                <span class="data-metric-val"><?= number_format((float)$o['PesoCanalEntrada'], 2) ?> <small>kg</small></span>
+                            </div>
+                            <div class="data-metric">
+                                <span class="data-metric-label">Cortes Obtenidos</span>
+                                <span class="data-metric-val val-primary"><?= number_format((float)$o['PesoTotalCortes'], 2) ?> <small>kg</small></span>
+                            </div>
+                            <div class="data-metric">
+                                <span class="data-metric-label">Rendimiento</span>
+                                <span class="data-metric-val val-success"><?= number_format((float)$o['RendimientoPct'], 2) ?>%</span>
+                            </div>
+                            <div class="data-metric">
+                                <span class="data-metric-label">Merma</span>
+                                <span class="data-metric-val val-danger"><?= number_format((float)$o['MermaPct'], 2) ?>%</span>
+                            </div>
+                        </div>
+
+                        <div class="data-card-footer">
+                            <button type="button" class="btn <?= $isProcess ? 'btn-primary' : 'btn-outline' ?> btn-operate-order data-card-btn" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
+                                <?php if ($isProcess): ?>
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    Operar Mesa
+                                <?php else: ?>
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    Ver Balance
+                                <?php endif; ?>
+                            </button>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
             </div>
 
             <!-- Controles de Paginación de Desposte -->

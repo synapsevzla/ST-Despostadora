@@ -136,8 +136,8 @@ ob_start();
                         <span>Peso a Procesar (kg) *</span>
                         <span id="badgePesoDisp" style="color:var(--primary); font-weight:600; text-transform:none;"></span>
                     </label>
-                    <input type="number" step="0.0001" name="peso_entrada" id="inputPesoEntrada" class="form-input" 
-                           style="font-size:1.8rem; font-weight:800; text-align:center; padding:0.75rem; color:var(--primary); letter-spacing:0.05em;" 
+                    <input type="text" inputmode="decimal" name="peso_entrada" id="inputPesoEntrada" class="form-input" 
+                           style="font-size:1.8rem; font-weight:800; text-align:center; padding:0.75rem; color:var(--primary); letter-spacing:0.05em; width:100%; box-sizing:border-box;" 
                            placeholder="0.0000" required>
                 </div>
 

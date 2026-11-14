@@ -197,24 +197,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // 5. Teclado numérico táctil en pantalla
+    // 5. Teclado numérico táctil en pantalla y sanitización
+    if (inputPeso) {
+        inputPeso.addEventListener('input', () => {
+            let v = inputPeso.value.replace(',', '.').replace(/[^0-9.]/g, '');
+            const parts = v.split('.');
+            if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+            if (parts[1] && parts[1].length > 4) v = parts[0] + '.' + parts[1].slice(0, 4);
+            inputPeso.value = v;
+        });
+    }
+
     document.querySelectorAll('.keypad-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             const key = btn.dataset.key;
             if (!key || !inputPeso) return;
 
+            let cur = (inputPeso.value || '').trim();
             if (key === 'C') {
                 inputPeso.value = '';
             } else if (key === '.') {
-                if (!inputPeso.value.includes('.')) {
-                    inputPeso.value = (inputPeso.value === '') ? '0.' : inputPeso.value + '.';
+                if (!cur.includes('.')) {
+                    inputPeso.value = (cur === '') ? '0.' : cur + '.';
                 }
             } else {
-                if (inputPeso.value.includes('.')) {
-                    const decimals = inputPeso.value.split('.')[1] || '';
+                if (cur.includes('.')) {
+                    const decimals = cur.split('.')[1] || '';
                     if (decimals.length >= 4) return; // Máximo 4 decimales
                 }
-                inputPeso.value += key;
+                inputPeso.value = (cur === '0') ? key : cur + key;
             }
             inputPeso.focus();
         });

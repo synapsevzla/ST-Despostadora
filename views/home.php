@@ -316,7 +316,8 @@ ob_start();
                     No hay órdenes de desposte registradas recientemente.
                 </div>
             <?php else: ?>
-                <div style="overflow-x: auto;">
+                <!-- Vista de Tabla para Escritorio -->
+                <div class="responsive-table-desktop" style="overflow-x: auto;">
                     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem;">
                         <thead>
                             <tr style="border-bottom: 2px solid var(--border-color); color: var(--text-secondary); text-transform: uppercase; font-size: 0.72rem; letter-spacing: 0.05em; background: rgba(55, 42, 37, 0.5);">
@@ -374,6 +375,65 @@ ob_start();
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+
+                <!-- Vista de Tarjetas Táctiles para Móviles / Tablets / POS 800x600 -->
+                <div class="responsive-cards-mobile" style="padding: 0.75rem;">
+                    <?php foreach ($recientes as $ord): ?>
+                        <?php 
+                            $isTerm = ($ord['Estado'] === 'FINALIZADO' || $ord['Estado'] === 'TERMINADA');
+                            $isProc = ((float)$ord['PesoTotalCortes'] > 0 && !$isTerm);
+                            $stClass = $isTerm ? 'status-finalizado' : ($isProc ? 'status-en-proceso' : 'status-abierta');
+                        ?>
+                        <div class="data-card <?= $stClass ?>">
+                            <div class="data-card-header">
+                                <span class="data-card-code"><?= Security::escape($ord['NroOrdenDesposte']) ?></span>
+                                <div class="data-card-badges">
+                                    <?php if (!empty(trim((string)$ord['LineaMesa']))): ?>
+                                        <span class="badge" style="background: #55433a; color: var(--text-primary); font-size: 0.7rem;">
+                                            <?= Security::escape($ord['LineaMesa']) ?>
+                                        </span>
+                                    <?php endif; ?>
+                                    <?php if ($isTerm): ?>
+                                        <span class="badge badge-success">Terminada</span>
+                                    <?php elseif ($isProc): ?>
+                                        <span class="badge badge-warning">En Proceso</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-info">Abierta</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div class="data-card-title"><?= Security::escape($ord['NombreCanal']) ?></div>
+
+                            <div class="data-card-grid">
+                                <div class="data-metric">
+                                    <span class="data-metric-label">Canal Entrada</span>
+                                    <span class="data-metric-val"><?= number_format((float)$ord['PesoCanalEntrada'], 2, ',', '.') ?> <small>kg</small></span>
+                                </div>
+                                <div class="data-metric">
+                                    <span class="data-metric-label">Cortes Pesados</span>
+                                    <span class="data-metric-val val-primary">
+                                        <?= number_format((float)$ord['PesoTotalCortes'], 2, ',', '.') ?> <small>kg</small>
+                                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(<?= (int)$ord['TotalCortesPesados'] ?>)</span>
+                                    </span>
+                                </div>
+                                <div class="data-metric" style="grid-column: span 2;">
+                                    <span class="data-metric-label">Rendimiento Cárnico</span>
+                                    <span class="data-metric-val <?= (float)$ord['RendimientoPct'] > 0 ? 'val-success' : '' ?>">
+                                        <?= number_format((float)$ord['RendimientoPct'], 2, ',', '.') ?>%
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="data-card-footer">
+                                <a href="/deboning" class="btn btn-primary data-card-btn" style="text-decoration: none;">
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                    Ir a Desposte
+                                </a>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php endif; ?>
         </div>

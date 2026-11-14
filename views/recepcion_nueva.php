@@ -201,9 +201,11 @@ ob_start();
             <div style="background:var(--bg-main); border:1px solid var(--border-color); border-radius:10px; padding:1.25rem;">
                 <label class="form-label" style="margin-bottom:0.75rem;">Visor de Captura de Peso</label>
                 
-                <div style="display:flex; gap:0.5rem; margin-bottom:1rem;">
-                    <input type="number" step="0.0001" min="0.0001" id="input_peso_individual" class="form-input" placeholder="0.0000" style="font-size:1.75rem; font-weight:800; text-align:right; font-family:monospace; color:var(--primary); height:60px;">
-                    <button type="button" class="btn btn-primary" id="btnAgregarPieza" style="width:auto; min-width:140px; font-size:1.05rem;" data-action="agregar-pieza">
+                <div style="display:flex; gap:0.5rem; margin-bottom:1rem; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:180px;">
+                        <input type="text" inputmode="decimal" id="input_peso_individual" class="form-input" placeholder="0.0000" style="font-size:1.75rem; font-weight:800; text-align:right; font-family:monospace; color:var(--primary); height:60px; width:100%; box-sizing:border-box;">
+                    </div>
+                    <button type="button" class="btn btn-primary" id="btnAgregarPieza" style="width:auto; min-width:130px; font-size:1.05rem; height:60px; display:inline-flex; align-items:center; justify-content:center; gap:0.35rem;" data-action="agregar-pieza">
                         <svg class="icon" viewBox="0 0 24 24" style="width:20px; height:20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         + Agregar
                     </button>

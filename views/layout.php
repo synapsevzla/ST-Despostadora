@@ -12,6 +12,7 @@ use Config\Assets;
     <title><?= Security::escape($title ?? 'Soluciones Totales Despostadora') ?></title>
     <link rel="icon" type="image/svg+xml" href="<?= Assets::faviconDataUri() ?>">
     <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/responsive-cards.css">
 </head>
 <body>
     <div class="app-shell">
