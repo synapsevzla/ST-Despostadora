@@ -12,6 +12,8 @@ yakpro-po/*
 !yakpro-po/yakpro-po.cnf
 dist_windows/
 dist_web/
+electron/node_modules/
+electron/php-win/
 
 # SO y Editores
 .DS_Store

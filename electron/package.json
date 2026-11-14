@@ -1,0 +1,77 @@
+{
+  "name": "st-despostadora",
+  "version": "1.0.0",
+  "description": "Sistema de Control Operativo de Desposte y Rendimiento Cárnico",
+  "main": "main.js",
+  "author": "Soluciones Totales",
+  "license": "Proprietary",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win --x64"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.solucionestotales.despostadora",
+    "productName": "ST Despostadora",
+    "directories": {
+      "output": "../dist_windows"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "portFinder.js",
+      "phpManager.js",
+      "configManager.js",
+      "wizard/**/*",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist_web",
+        "to": "dist_web",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "php-win",
+        "to": "php-win",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ST Despostadora",
+      "uninstallDisplayName": "ST Despostadora",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

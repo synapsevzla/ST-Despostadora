@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración Inicial - ST Despostadora</title>
+    <link rel="stylesheet" href="setup.css">
+</head>
+<body>
+    <!-- Barra de título personalizada para el Wizard -->
+    <header class="wizard-titlebar">
+        <div class="brand">
+            <span class="brand-text">ST Despostadora</span>
+        </div>
+        <div class="window-controls">
+            <button id="btnMin" class="win-btn" title="Minimizar">─</button>
+            <button id="btnClose" class="win-btn close" title="Cerrar">✕</button>
+        </div>
+    </header>
+
+    <main class="wizard-container">
+        <div class="wizard-card">
+            <div class="wizard-header">
+                <div class="logo-badge">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                    </svg>
+                </div>
+                <h2>Conexión a Base de Datos</h2>
+                <p>No se encontró una configuración válida (.env). Configure el acceso a Microsoft SQL Server para inicializar el sistema.</p>
+            </div>
+
+            <div id="alertBox" class="alert-box" style="display: none;"></div>
+
+            <form id="setupForm" class="setup-form">
+                <div class="form-row">
+                    <div class="form-group flex-2">
+                        <label for="dbHost">Servidor / Host SQL Server</label>
+                        <input type="text" id="dbHost" name="DB_HOST" placeholder="ej. 127.0.0.1 o localhost\SQLEXPRESS" value="127.0.0.1" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="dbPort">Puerto</label>
+                        <input type="number" id="dbPort" name="DB_PORT" value="1433" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="dbName">Nombre de la Base de Datos</label>
+                    <input type="text" id="dbName" name="DB_NAME" placeholder="ej. STB_DESPOSTADORA o SAINT_ADMIN" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="dbUser">Usuario SQL</label>
+                        <input type="text" id="dbUser" name="DB_USER" placeholder="ej. sa" value="sa" required>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="dbPass">Contraseña SQL</label>
+                        <input type="password" id="dbPass" name="DB_PASS" placeholder="••••••••">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group flex-1">
+                        <label for="dbDriver">Controlador (Driver)</label>
+                        <select id="dbDriver" name="DB_DRIVER">
+                            <option value="sqlsrv" selected>Microsoft SQL Server (sqlsrv)</option>
+                            <option value="dblib">FreeTDS / dblib</option>
+                        </select>
+                    </div>
+                    <div class="form-group flex-1">
+                        <label for="dbTimeout">Timeout (Segundos)</label>
+                        <input type="number" id="dbTimeout" name="DB_TIMEOUT" value="5" min="2" max="60">
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="btnTest" class="btn btn-secondary">
+                        <span id="btnTestText">Probar Conexión</span>
+                    </button>
+                    <button type="submit" id="btnSave" class="btn btn-primary">
+                        <span>Guardar y Continuar</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script src="setup.js"></script>
+</body>
+</html>
