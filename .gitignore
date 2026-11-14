@@ -7,6 +7,11 @@ license_cache.json
 scratch/
 .cache/
 
+#herramientas de tercer que no van a github
+yakpro-po/
+dist_windows/
+dist_web/
+
 # SO y Editores
 .DS_Store
 Thumbs.db
