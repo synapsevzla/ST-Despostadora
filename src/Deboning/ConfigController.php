@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Src\Deboning;
 
+use Config\Database;
 use Config\Security;
 use Src\Auth\AuthController;
 use Src\Utils\View;
@@ -45,6 +46,10 @@ final class ConfigController
             ]);
         } catch (Throwable $e) {
             error_log('[CONFIG INDEX ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
             http_response_code(500);
             echo "Error cargando la configuración: " . htmlspecialchars($e->getMessage());
         }
@@ -75,6 +80,10 @@ final class ConfigController
 
             echo json_encode(['success' => true, 'message' => 'Configuración guardada exitosamente.']);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -109,6 +118,10 @@ final class ConfigController
                 'preview' => $preview
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -152,6 +165,10 @@ final class ConfigController
                 'has_more' => $result['has_more']
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -184,6 +201,10 @@ final class ConfigController
             ConfigService::saveSpecies($codProd, $codMerma, $margen, $diasRefrig, $diasCongel, $activo, $user['codusua']);
             echo json_encode(['success' => true, 'message' => 'Especie registrada / actualizada correctamente.']);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -201,6 +222,10 @@ final class ConfigController
             $cuts = ConfigService::getSpeciesCuts($canal);
             echo json_encode(['success' => true, 'cuts' => $cuts]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -232,6 +257,10 @@ final class ConfigController
             ConfigService::addSpeciesCut($canal, $corte, $rend, $margen, $dias, $user['codusua']);
             echo json_encode(['success' => true, 'message' => 'Corte procesado exitosamente.']);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -257,6 +286,10 @@ final class ConfigController
             ConfigService::removeSpeciesCut($canal, $corte, $user['codusua']);
             echo json_encode(['success' => true, 'message' => 'Corte desvinculado exitosamente.']);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -274,6 +307,10 @@ final class ConfigController
             $mesas = ConfigService::getMesas($onlyActive);
             echo json_encode(['success' => true, 'mesas' => $mesas]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -307,6 +344,10 @@ final class ConfigController
                 'mesas' => $mesas
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -338,6 +379,10 @@ final class ConfigController
                 'mesas' => $mesas
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -368,6 +413,10 @@ final class ConfigController
                 'mesas' => $mesas
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }

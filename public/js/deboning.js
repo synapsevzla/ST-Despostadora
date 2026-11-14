@@ -119,7 +119,7 @@ async function loadOrderInStation(nroOrden) {
 
         renderBalanceAndTable(json.balance);
     } catch (e) {
-        showAlert('Error al cargar la orden seleccionada', 'danger');
+        showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
     }
 }
 
@@ -176,7 +176,7 @@ async function registerCutWeight() {
         }
     } catch (e) {
         playBeep('error');
-        showAlert('Error de conexión al registrar pesaje', 'danger');
+        showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
     } finally {
         btn.disabled = false;
         btn.textContent = 'REGISTRAR CORTE';
@@ -204,7 +204,7 @@ async function deleteCutItem(id) {
             showAlert(json.error || 'Error eliminando pesaje', 'danger');
         }
     } catch (e) {
-        showAlert('Error al procesar la eliminación', 'danger');
+        showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
     }
 }
 
@@ -372,7 +372,7 @@ async function executeCloseOrder() {
         }
     } catch (e) {
         playBeep('error');
-        showAlert('Error de conexión', 'danger');
+        showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Confirmar y Cerrar Desposte';

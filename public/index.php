@@ -52,7 +52,8 @@ $requestUri = ($rawUri !== '/' && str_ends_with($rawUri, '/')) ? rtrim($rawUri, 
 $requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 // Manejo de rutas
-switch ($requestUri) {
+try {
+    switch ($requestUri) {
     case '/login':
         if ($requestMethod === 'POST') {
             AuthController::handleLogin();
@@ -205,4 +206,23 @@ switch ($requestUri) {
         http_response_code(404);
         echo "404 - Página no encontrada";
         break;
+    }
+} catch (\Throwable $e) {
+    if (Database::isConnectionError($e)) {
+        error_log('[DB CONNECTION ERROR] ' . $e->getMessage());
+        $isApi = str_starts_with($requestUri, '/api/')
+            || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+        if ($isApi) {
+            Database::handleApiError($e);
+        } else {
+            Database::renderErrorView(Database::MSG_OFFLINE);
+        }
+        exit;
+    }
+
+    error_log('[SERVER ERROR] ' . $e->getMessage());
+    http_response_code(500);
+    echo "500 - Error interno del servidor.";
 }

@@ -22,6 +22,11 @@ final class AuthController
             exit;
         }
 
+        // Si no se pasó un error previo y la conexión a la base de datos falla, mostrar alerta
+        if ($error === null && !Database::checkConnection()) {
+            $error = Database::MSG_OFFLINE;
+        }
+
         $csrfToken = Security::generateCsrfToken();
         View::render('login', [
             'csrf_token' => $csrfToken,
@@ -118,9 +123,12 @@ final class AuthController
 
             header('Location: /');
             exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             error_log('[LOGIN ERROR] ' . $e->getMessage());
-            self::showLogin('No se pudo establecer conexión con el servidor de datos.');
+            $errorMsg = Database::isConnectionError($e) 
+                ? Database::MSG_OFFLINE 
+                : 'No se pudo establecer conexión con el servidor de datos.';
+            self::showLogin($errorMsg);
         }
     }
 

@@ -37,11 +37,16 @@ ob_start();
         </div>
     </div>
 
-    <?php if (!empty($dashboardError)): ?>
-        <div class="alert alert-danger" style="background: rgba(238, 103, 55, 0.15); border: 1px solid var(--danger); padding: 0.85rem 1rem; border-radius: 8px; color: var(--text-primary); font-size: 0.9rem;">
-            ⚠️ <strong>Aviso del sistema:</strong> <?= Security::escape($dashboardError) ?>
+    <div id="dashboardAlertContainer" style="<?= !empty($dashboardError) ? '' : 'display: none;' ?>">
+        <div class="alert alert-error" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+            <svg class="icon" viewBox="0 0 24 24" style="flex-shrink: 0; width: 1.5rem; height: 1.5rem; stroke: currentColor;" fill="none" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <span id="dashboardAlertMsg"><?= Security::escape($dashboardError ?? 'Base de datos o servidor fuera de línea por favor contacte a soporte técnico') ?></span>
         </div>
-    <?php endif; ?>
+    </div>
 
     <!-- SECCIÓN 1: Total de Kilos Despostados (Día, Semana, Mes) -->
     <section class="kpi-section">

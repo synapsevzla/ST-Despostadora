@@ -30,7 +30,7 @@ async function guardarConfigGeneral(e) {
         const data = await res.json();
         alert(data.success ? (data.message || 'Configuración guardada exitosamente.') : ('Error: ' + (data.error || 'No se pudo guardar')));
     } catch {
-        alert('Error de conexión al guardar configuración.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -48,7 +48,7 @@ async function guardarCorrelativo(e, form) {
             alert('Error: ' + (data.error || 'No se pudo actualizar'));
         }
     } catch {
-        alert('Error de conexión al actualizar correlativo.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -123,7 +123,7 @@ async function guardarEspecie(e) {
             alert('Error: ' + (data.error || 'No se pudo guardar la especie.'));
         }
     } catch {
-        alert('Error de conexión al guardar especie.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -255,7 +255,7 @@ async function guardarNuevoCorte(e) {
             alert('Error: ' + (data.error || 'No se pudo guardar el corte.'));
         }
     } catch {
-        alert('Error de conexión al vincular/editar corte.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -275,7 +275,7 @@ async function eliminarCorte(codCanal, codCorte) {
             alert('Error: ' + (data.error || 'No se pudo eliminar el corte.'));
         }
     } catch {
-        alert('Error al desvincular corte.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -360,7 +360,7 @@ async function guardarMesa(e) {
             alert('Error: ' + (data.error || 'No se pudo guardar la mesa'));
         }
     } catch {
-        alert('Error de conexión al guardar la mesa.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -376,7 +376,7 @@ async function toggleEstadoMesa(id, nuevoActivo) {
         if (data.success && data.mesas) renderizarListaMesas(data.mesas);
         else if (!data.success) alert('Error: ' + (data.error || 'No se pudo modificar el estado'));
     } catch {
-        alert('Error de conexión al cambiar estado de la mesa.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -396,7 +396,7 @@ async function eliminarMesa(id, nombre) {
             alert('Error: ' + (data.error || 'No se pudo eliminar la mesa'));
         }
     } catch {
-        alert('Error de conexión al eliminar la mesa.');
+        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 

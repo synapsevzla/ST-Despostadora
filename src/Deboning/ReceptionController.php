@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Src\Deboning;
 
+use Config\Database;
 use Config\Security;
 use Src\Auth\AuthController;
 use Src\Utils\View;
@@ -44,6 +45,10 @@ final class ReceptionController
             ]);
         } catch (Throwable $e) {
             error_log('[RECEPTION INDEX ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
             http_response_code(500);
             echo "Error cargando recepciones: " . htmlspecialchars($e->getMessage());
         }
@@ -77,6 +82,10 @@ final class ReceptionController
             ]);
         } catch (Throwable $e) {
             error_log('[RECEPTION NUEVA ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
             http_response_code(500);
             echo "Error cargando formulario de recepción: " . htmlspecialchars($e->getMessage());
         }
@@ -143,6 +152,10 @@ final class ReceptionController
                 'nro_recepcion' => $nroRecepcion
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -160,6 +173,10 @@ final class ReceptionController
             $details = ReceptionService::getReceptionDetail($nrorec);
             echo json_encode(['success' => true, 'details' => $details]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }

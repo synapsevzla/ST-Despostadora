@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Src\Deboning;
 
+use Config\Database;
 use Config\Security;
 use Src\Auth\AuthController;
 use Src\Utils\View;
@@ -43,6 +44,10 @@ final class DeboningController
             ]);
         } catch (Throwable $e) {
             error_log('[DEBONING INDEX ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
             http_response_code(500);
             echo "Error cargando módulo de desposte: " . htmlspecialchars($e->getMessage());
         }
@@ -74,6 +79,10 @@ final class DeboningController
             ]);
         } catch (Throwable $e) {
             error_log('[DEBONING NUEVA ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
             http_response_code(500);
             echo "Error cargando formulario de desposte: " . htmlspecialchars($e->getMessage());
         }
@@ -126,6 +135,10 @@ final class DeboningController
                 'nro_orden' => $nroOrden
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -165,6 +178,10 @@ final class DeboningController
                 'balance' => $balance
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -196,6 +213,10 @@ final class DeboningController
                 'balance' => $balance
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -217,6 +238,10 @@ final class DeboningController
             $balance = DeboningService::getYieldAndCosting($nroOrden);
             echo json_encode(['success' => true, 'balance' => $balance]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -244,6 +269,10 @@ final class DeboningController
                 'message' => "Orden de desposte {$nroOrden} cerrada exitosamente. Cortes y mermas cargados en existencias internas."
             ]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -261,6 +290,10 @@ final class DeboningController
             $receptions = ReceptionService::getAvailableForDeboning($canal);
             echo json_encode(['success' => true, 'receptions' => $receptions]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
@@ -277,6 +310,10 @@ final class DeboningController
             $orders = DeboningService::getActiveOrders();
             echo json_encode(['success' => true, 'orders' => $orders]);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }

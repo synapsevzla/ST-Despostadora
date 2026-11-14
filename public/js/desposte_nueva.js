@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (e) {
             selectRecepcion.innerHTML = '<option value="">-- Error al cargar recepciones --</option>';
-            showAlert('Error comunicando con el servidor para consultar recepciones.', 'danger');
+            showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
         }
         guardarBorrador();
     }
@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (e) {
                 playBeep('error');
-                showAlert('Error de conexión con el servidor al registrar la orden.', 'danger');
+                showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = originalHtml;
             }

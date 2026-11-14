@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } catch (err) {
-            showAlert('Error de comunicación con el servidor: ' + err.message);
+            showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
             if (btnSubmit) {
                 btnSubmit.disabled = false;
                 btnSubmit.textContent = 'Guardar y Registrar Recepción';

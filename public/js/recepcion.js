@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cont.innerHTML = html;
         } catch (err) {
-            cont.innerHTML = `<div style="text-align:center; padding:1.5rem; color:var(--danger);">Error cargando detalle: ${err.message}</div>`;
+            cont.innerHTML = `<div class="alert alert-error" style="text-align:center; padding:1rem; margin:1rem;">Base de datos o servidor fuera de línea por favor contacte a soporte técnico</div>`;
         }
     }
 

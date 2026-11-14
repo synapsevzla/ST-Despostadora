@@ -32,13 +32,15 @@
                 headers: { 'Accept': 'application/json' },
             });
 
-            if (!res.ok) {
-                throw new Error('Error en el servidor al obtener KPIs');
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || !json.success || !json.data) {
+                const errMsg = (json && json.error) ? json.error : 'Base de datos o servidor fuera de línea por favor contacte a soporte técnico';
+                throw new Error(errMsg);
             }
 
-            const json = await res.json();
-            if (!json.success || !json.data) {
-                throw new Error(json.error || 'Respuesta inválida');
+            const alertContainer = document.getElementById('dashboardAlertContainer');
+            if (alertContainer) {
+                alertContainer.style.display = 'none';
             }
 
             const data = json.data;
@@ -77,6 +79,12 @@
 
         } catch (err) {
             console.error('[Dashboard Error]', err);
+            const alertContainer = document.getElementById('dashboardAlertContainer');
+            const alertMsg = document.getElementById('dashboardAlertMsg');
+            if (alertContainer && alertMsg) {
+                alertMsg.textContent = err.message || 'Base de datos o servidor fuera de línea por favor contacte a soporte técnico';
+                alertContainer.style.display = 'block';
+            }
         } finally {
             isFetching = false;
             if (refreshIcon) {

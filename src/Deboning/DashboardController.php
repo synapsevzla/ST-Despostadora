@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Src\Deboning;
 
+use Config\Database;
 use Src\Auth\AuthController;
 use Src\Utils\View;
 use Throwable;
@@ -20,6 +21,10 @@ final class DashboardController
             $summary = DashboardService::getDashboardSummary();
         } catch (Throwable $e) {
             error_log('[DASHBOARD ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
             $summary = [
                 'ordenes' => ['abiertas' => 0, 'en_proceso' => 0, 'terminadas' => 0, 'total' => 0],
                 'kilos_despostados' => ['dia' => 0.0, 'semana' => 0.0, 'mes' => 0.0, 'cortes_dia' => 0, 'cortes_semana' => 0, 'cortes_mes' => 0],
@@ -53,6 +58,10 @@ final class DashboardController
             $data = DashboardService::getDashboardSummary();
             echo json_encode(['success' => true, 'data' => $data], JSON_UNESCAPED_UNICODE);
         } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
             http_response_code(500);
             echo json_encode(['success' => false, 'error' => $e->getMessage()], JSON_UNESCAPED_UNICODE);
         }

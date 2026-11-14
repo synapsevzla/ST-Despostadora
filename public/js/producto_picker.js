@@ -104,7 +104,11 @@
             if (spinner) spinner.style.display = 'none';
 
             if (!data.success) {
-                if (totalEl) totalEl.textContent = 'Error al cargar productos';
+                if (vacio) {
+                    vacio.style.display = 'block';
+                    vacio.textContent = data.error || 'Base de datos o servidor fuera de línea por favor contacte a soporte técnico';
+                }
+                if (totalEl) totalEl.textContent = 'Servicio fuera de línea';
                 return;
             }
 
@@ -135,7 +139,11 @@
             if (err.name === 'AbortError') return;
             isLoading = false;
             if (spinner) spinner.style.display = 'none';
-            if (totalEl) totalEl.textContent = 'Error de conexión';
+            if (vacio) {
+                vacio.style.display = 'block';
+                vacio.textContent = 'Base de datos o servidor fuera de línea por favor contacte a soporte técnico';
+            }
+            if (totalEl) totalEl.textContent = 'Servicio fuera de línea';
             console.error('Error fetching productos:', err);
         }
     }
