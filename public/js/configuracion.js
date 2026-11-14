@@ -1,55 +1,35 @@
 /**
  * ST-Despostadora - Módulo de Configuración Operativa
- * Vanilla ES6+, 100% compliant con Content-Security-Policy (sin inline handlers).
+ * Vanilla ES6+, 100% compliant con Content-Security-Policy.
  */
+
+const byId = id => document.getElementById(id);
+const escapeHtml = str => (!str ? '' : String(str).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m])));
 
 function switchConfigTab(tabId, btn) {
     document.querySelectorAll('.config-tab-panel').forEach(p => p.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    
-    const target = document.getElementById(tabId);
+    const target = byId(tabId);
     if (target) target.style.display = 'block';
     if (btn) btn.classList.add('active');
 }
 
 function actualizarPreviewCorrelativo(tipo) {
-    const prefEl = document.getElementById('pref_' + tipo);
-    const longEl = document.getElementById('long_' + tipo);
-    const numEl = document.getElementById('num_' + tipo);
-    if (!prefEl || !longEl || !numEl) return;
-
-    const pref = prefEl.value.trim();
-    let long = parseInt(longEl.value, 10) || 20;
-    let num = (parseInt(numEl.value, 10) || 0) + 1;
-    
-    if (long > 20) long = 20;
-    if (long < 8) long = 8;
-    
-    const espacio = Math.max(1, long - pref.length);
-    const padded = String(num).padStart(espacio, '0');
-    const preview = (pref + padded).substring(0, 20);
-    
-    const el = document.getElementById('prev_' + tipo);
-    if (el) el.textContent = preview;
+    const pref = (byId('pref_' + tipo)?.value || '').trim();
+    const long = Math.min(20, Math.max(8, parseInt(byId('long_' + tipo)?.value, 10) || 20));
+    const num = (parseInt(byId('num_' + tipo)?.value, 10) || 0) + 1;
+    const padded = String(num).padStart(Math.max(1, long - pref.length), '0');
+    const el = byId('prev_' + tipo);
+    if (el) el.textContent = (pref + padded).substring(0, 20);
 }
 
 async function guardarConfigGeneral(e) {
     e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    
     try {
-        const res = await fetch('/api/config/general', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/general', { method: 'POST', body: new FormData(e.target) });
         const data = await res.json();
-        if (data.success) {
-            alert(data.message || 'Configuración guardada exitosamente.');
-        } else {
-            alert('Error: ' + (data.error || 'No se pudo guardar'));
-        }
-    } catch (err) {
+        alert(data.success ? (data.message || 'Configuración guardada exitosamente.') : ('Error: ' + (data.error || 'No se pudo guardar')));
+    } catch {
         alert('Error de conexión al guardar configuración.');
     }
 }
@@ -58,23 +38,16 @@ async function guardarCorrelativo(e, form) {
     e.preventDefault();
     const formData = new FormData(form);
     const tipo = form.dataset.tipo || formData.get('tipo');
-    
     try {
-        const res = await fetch('/api/config/correlativo', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/correlativo', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
-            alert(data.message || 'Correlativo actualizado correctamente.');
-            if (data.preview) {
-                const el = document.getElementById('prev_' + tipo);
-                if (el) el.textContent = data.preview;
-            }
+            alert(data.message || 'Correlativo actualizado.');
+            if (data.preview && byId('prev_' + tipo)) byId('prev_' + tipo).textContent = data.preview;
         } else {
             alert('Error: ' + (data.error || 'No se pudo actualizar'));
         }
-    } catch (err) {
+    } catch {
         alert('Error de conexión al actualizar correlativo.');
     }
 }
@@ -82,48 +55,104 @@ async function guardarCorrelativo(e, form) {
 let productosDisponiblesCache = [];
 
 async function cargarProductosEspecie() {
-    const instEl = document.getElementById('filtro_instancia');
-    const inst = instEl ? instEl.value : '';
+    const inst = byId('filtro_instancia')?.value || '';
     try {
         const res = await fetch('/api/config/productos?codinst=' + encodeURIComponent(inst));
         const data = await res.json();
-        if (data.success) {
-            productosDisponiblesCache = data.products;
-            
-            const selCanal = document.getElementById('sel_codprod');
-            const selMerma = document.getElementById('sel_codprod_merma');
-            if (!selCanal || !selMerma) return;
-            
-            selCanal.innerHTML = '<option value="">-- Seleccione Producto Canal --</option>';
-            selMerma.innerHTML = '<option value="">-- Seleccione Producto Merma --</option>';
-            
-            data.products.forEach(p => {
-                const optCanal = document.createElement('option');
-                optCanal.value = p.CodProd;
-                optCanal.textContent = `[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad}) - Costo: $${Number(p.CostAct).toFixed(2)}`;
-                selCanal.appendChild(optCanal);
-                
-                const optMerma = document.createElement('option');
-                optMerma.value = p.CodProd;
-                optMerma.textContent = `[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad})`;
-                selMerma.appendChild(optMerma);
-            });
-        }
+        if (!data.success) return;
+        productosDisponiblesCache = data.products || [];
+
+        const selCanal = byId('sel_codprod');
+        const selMerma = byId('sel_codprod_merma');
+        if (!selCanal || !selMerma) return;
+
+        const curCanal = selCanal.value;
+        const curMerma = selMerma.value;
+
+        selCanal.innerHTML = '<option value="">-- Seleccione Producto Canal --</option>';
+        selMerma.innerHTML = '<option value="">-- Seleccione Producto Merma --</option>';
+
+        productosDisponiblesCache.forEach(p => {
+            const desc = `[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad})`;
+            selCanal.add(new Option(`${desc} - Costo: $${Number(p.CostAct).toFixed(2)}`, p.CodProd));
+            selMerma.add(new Option(desc, p.CodProd));
+        });
+
+        if (curCanal) selCanal.value = curCanal;
+        if (curMerma) selMerma.value = curMerma;
     } catch (err) {
         console.error('Error cargando productos:', err);
     }
 }
 
+function limpiarFormEspecie() {
+    const form = byId('formEspecie');
+    if (form) form.reset();
+    if (byId('esp_codprod_hidden')) byId('esp_codprod_hidden').value = '';
+    if (byId('sel_codprod')) byId('sel_codprod').disabled = false;
+    if (byId('tituloFormEspecie')) byId('tituloFormEspecie').textContent = 'Configurar Especie / Canal de Entrada';
+    if (byId('btnGuardarEspecie')) byId('btnGuardarEspecie').textContent = 'Guardar Especie';
+    if (byId('btnCancelarEdicionEspecie')) byId('btnCancelarEdicionEspecie').style.display = 'none';
+
+    if (byId('esp_margen')) byId('esp_margen').value = '30.0000';
+    if (byId('esp_refrig')) byId('esp_refrig').value = '15';
+    if (byId('esp_congel')) byId('esp_congel').value = '180';
+    if (byId('esp_activo')) byId('esp_activo').value = '1';
+}
+
+function editarEspecie(codProd, nombre, merma, margen, refrig, congel, activo) {
+    const filtro = byId('filtro_instancia');
+    if (filtro && filtro.value !== '') {
+        filtro.value = '';
+        cargarProductosEspecie().then(() => aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, congel, activo));
+    } else {
+        aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, congel, activo);
+    }
+}
+
+function aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, congel, activo) {
+    const selCanal = byId('sel_codprod');
+    const selMerma = byId('sel_codprod_merma');
+    if (byId('esp_codprod_hidden')) byId('esp_codprod_hidden').value = codProd;
+
+    if (selCanal) {
+        if (!Array.from(selCanal.options).some(o => o.value === codProd)) {
+            selCanal.add(new Option(`[${codProd}] ${nombre}`, codProd, true, true));
+        }
+        selCanal.value = codProd;
+        selCanal.disabled = true;
+    }
+    if (selMerma) {
+        if (!Array.from(selMerma.options).some(o => o.value === merma) && merma) {
+            selMerma.add(new Option(`[${merma}] (Merma Asignada)`, merma, true, true));
+        }
+        selMerma.value = merma;
+    }
+
+    if (byId('esp_margen')) byId('esp_margen').value = Number(margen).toFixed(4);
+    if (byId('esp_refrig')) byId('esp_refrig').value = refrig;
+    if (byId('esp_congel')) byId('esp_congel').value = congel;
+    if (byId('esp_activo')) byId('esp_activo').value = activo;
+
+    if (byId('tituloFormEspecie')) byId('tituloFormEspecie').textContent = `Editar Especie: [${codProd}] ${nombre}`;
+    if (byId('btnGuardarEspecie')) byId('btnGuardarEspecie').textContent = 'Actualizar Especie';
+    if (byId('btnCancelarEdicionEspecie')) byId('btnCancelarEdicionEspecie').style.display = 'inline-block';
+
+    const card = byId('cardFormEspecie') || byId('formEspecie');
+    if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function guardarEspecie(e) {
     e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    
+    const formData = new FormData(e.target);
+    const selCanal = byId('sel_codprod');
+    const hiddenCod = byId('esp_codprod_hidden');
+    if (selCanal && selCanal.disabled && hiddenCod && hiddenCod.value) {
+        formData.set('codprod', hiddenCod.value);
+    }
+
     try {
-        const res = await fetch('/api/config/especie', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/especie', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
             alert(data.message || 'Especie guardada.');
@@ -131,155 +160,175 @@ async function guardarEspecie(e) {
         } else {
             alert('Error: ' + (data.error || 'No se pudo guardar la especie.'));
         }
-    } catch (err) {
+    } catch {
         alert('Error de conexión al guardar especie.');
     }
 }
 
-function limpiarFormEspecie() {
-    const form = document.getElementById('formEspecie');
-    if (form) form.reset();
-}
-
 async function administrarCortes(codCanal) {
-    const panel = document.getElementById('panel_cortes_' + codCanal);
+    const panel = byId('panel_cortes_' + codCanal);
     if (!panel) return;
-    
     if (panel.style.display === 'block') {
         panel.style.display = 'none';
         return;
     }
-    
     panel.style.display = 'block';
     await cargarListaCortes(codCanal);
 }
 
 async function cargarListaCortes(codCanal) {
-    const cont = document.getElementById('lista_cortes_' + codCanal);
+    const cont = byId('lista_cortes_' + codCanal);
     if (!cont) return;
-    
     cont.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Cargando cortes...</span>';
-    
+
     try {
         const res = await fetch('/api/config/cortes?canal=' + encodeURIComponent(codCanal));
         const data = await res.json();
-        if (data.success) {
-            if (data.cuts.length === 0) {
-                cont.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">No hay cortes vinculados aún a esta especie.</span>';
-                return;
-            }
-            
-            let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
-            data.cuts.forEach(c => {
-                html += `
-                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
-                    <div>
-                        <strong style="color: var(--text-primary); font-size: 0.95rem;">[${c.CodProdCorte}] ${c.NombreCorte}</strong>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 1rem; margin-top: 0.2rem; flex-wrap: wrap;">
-                            <span>Costo ERP Base: $${Number(c.CostActBase).toFixed(2)}</span>
-                            <span>Precio1 ERP: $${Number(c.Precio1ERP).toFixed(2)}</span>
-                            <span>Margen Sugerido: ${c.MargenUtilidadPct}%</span>
-                            <span>Vida Útil: ${c.DiasVencimiento} días</span>
-                        </div>
+        if (!data.success || !data.cuts.length) {
+            cont.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">${!data.success ? 'Error cargando cortes.' : 'No hay cortes vinculados aún.'}</span>`;
+            return;
+        }
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 0.5rem;">';
+        data.cuts.forEach(c => {
+            html += `
+            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 0.65rem 0.85rem; border-radius: 8px; border: 1px solid var(--border-color); flex-wrap: wrap; gap: 0.5rem;">
+                <div>
+                    <strong style="color: var(--text-primary); font-size: 0.95rem;">[${c.CodProdCorte}] ${escapeHtml(c.NombreCorte)}</strong>
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; gap: 1rem; margin-top: 0.2rem; flex-wrap: wrap;">
+                        <span>Costo ERP Base: $${Number(c.CostActBase).toFixed(2)}</span>
+                        <span>Precio1 ERP: $${Number(c.Precio1ERP).toFixed(2)}</span>
+                        <span>% Rendimiento: <strong>${Number(c.RendimientoEsperadoPct).toFixed(2)}%</strong></span>
+                        <span>Margen: <strong>${Number(c.MargenUtilidadPct).toFixed(2)}%</strong></span>
+                        <span>Vida Útil: <strong>${c.DiasVencimiento} días</strong></span>
                     </div>
-                    <button type="button" class="btn btn-desvincular-corte" style="background: rgba(238, 103, 55, 0.15); color: var(--danger); border: 1px solid rgba(238, 103, 55, 0.3); padding: 0.35rem 0.65rem; font-size: 0.8rem;" data-canal="${codCanal}" data-corte="${c.CodProdCorte}">
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-outline btn-editar-corte" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;"
+                            data-canal="${codCanal}" data-corte="${c.CodProdCorte}" data-nombre="${escapeHtml(c.NombreCorte)}"
+                            data-rendimiento="${c.RendimientoEsperadoPct}" data-margen="${c.MargenUtilidadPct}" data-dias="${c.DiasVencimiento}">
+                        Editar
+                    </button>
+                    <button type="button" class="btn btn-desvincular-corte" style="background: rgba(238, 103, 55, 0.15); color: var(--danger); border: 1px solid rgba(238, 103, 55, 0.3); padding: 0.35rem 0.65rem; font-size: 0.8rem;" 
+                            data-canal="${codCanal}" data-corte="${c.CodProdCorte}">
                         Desvincular
                     </button>
                 </div>
-                `;
-            });
-            html += '</div>';
-            cont.innerHTML = html;
-        }
-    } catch (err) {
+            </div>`;
+        });
+        html += '</div>';
+        cont.innerHTML = html;
+    } catch {
         cont.innerHTML = '<span style="color: var(--danger); font-size: 0.85rem;">Error cargando cortes.</span>';
     }
 }
 
 let currentModalCanal = '';
-async function abrirModalAgregarCorte(codCanal) {
+
+async function abrirModalAgregarCorte(codCanal, nombreCanal) {
     currentModalCanal = codCanal;
-    document.getElementById('modal_canal_cod').value = codCanal;
-    
-    const modalNombre = document.getElementById('modal_canal_nombre');
-    modalNombre.value = codCanal;
-    
-    const selCorte = document.getElementById('modal_sel_corte');
-    selCorte.innerHTML = '<option value="">-- Cargando productos disponibles --</option>';
-    
-    const modal = document.getElementById('modalCorte');
-    modal.style.display = 'flex';
-    modal.classList.add('active');
-    
+    byId('formAgregarCorte')?.reset();
+    if (byId('modal_canal_cod')) byId('modal_canal_cod').value = codCanal;
+    if (byId('modal_canal_nombre')) byId('modal_canal_nombre').value = `[${codCanal}] ${nombreCanal || codCanal}`;
+    if (byId('tituloModalCorte')) byId('tituloModalCorte').textContent = `Asociar Corte a Especie: [${codCanal}]`;
+    if (byId('modal_corte_hidden')) byId('modal_corte_hidden').value = '';
+    if (byId('grupo_modal_sel_corte')) byId('grupo_modal_sel_corte').style.display = 'block';
+    if (byId('grupo_modal_corte_estatico')) byId('grupo_modal_corte_estatico').style.display = 'none';
+
+    const selCorte = byId('modal_sel_corte');
+    if (selCorte) {
+        selCorte.required = true;
+        selCorte.disabled = false;
+        selCorte.innerHTML = '<option value="">-- Cargando productos disponibles --</option>';
+    }
+    if (byId('btnSubmitModalCorte')) byId('btnSubmitModalCorte').textContent = 'Vincular Corte';
+    if (byId('modal_corte_rendimiento')) byId('modal_corte_rendimiento').value = '0.0000';
+    if (byId('modal_corte_margen')) byId('modal_corte_margen').value = '30.0000';
+    if (byId('modal_corte_dias')) byId('modal_corte_dias').value = '15';
+
+    const modal = byId('modalCorte');
+    if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); }
+
     try {
         const res = await fetch('/api/config/productos');
         const data = await res.json();
-        if (data.success) {
+        if (data.success && selCorte) {
             selCorte.innerHTML = '<option value="">-- Seleccione Corte a Asociar --</option>';
             data.products.forEach(p => {
                 if (p.CodProd !== codCanal) {
-                    const opt = document.createElement('option');
-                    opt.value = p.CodProd;
-                    opt.textContent = `[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad}) - Costo: $${Number(p.CostAct).toFixed(2)}`;
-                    selCorte.appendChild(opt);
+                    selCorte.add(new Option(`[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad}) - Costo: $${Number(p.CostAct).toFixed(2)}`, p.CodProd));
                 }
             });
         }
-    } catch (err) {
-        selCorte.innerHTML = '<option value="">Error cargando cortes</option>';
+    } catch {
+        if (selCorte) selCorte.innerHTML = '<option value="">Error cargando cortes</option>';
     }
 }
 
+function abrirModalEditarCorte(codCanal, codCorte, nombreCorte, rend, margen, dias) {
+    currentModalCanal = codCanal;
+    if (byId('modal_canal_cod')) byId('modal_canal_cod').value = codCanal;
+    if (byId('modal_canal_nombre')) byId('modal_canal_nombre').value = `[${codCanal}]`;
+    if (byId('tituloModalCorte')) byId('tituloModalCorte').textContent = `Editar Corte: [${codCorte}] ${nombreCorte}`;
+    if (byId('modal_corte_hidden')) byId('modal_corte_hidden').value = codCorte;
+
+    if (byId('grupo_modal_sel_corte')) byId('grupo_modal_sel_corte').style.display = 'none';
+    const selCorte = byId('modal_sel_corte');
+    if (selCorte) { selCorte.required = false; selCorte.disabled = true; }
+
+    if (byId('grupo_modal_corte_estatico')) byId('grupo_modal_corte_estatico').style.display = 'block';
+    if (byId('modal_corte_nombre_estatico')) byId('modal_corte_nombre_estatico').value = `[${codCorte}] ${nombreCorte}`;
+
+    if (byId('modal_corte_rendimiento')) byId('modal_corte_rendimiento').value = Number(rend).toFixed(4);
+    if (byId('modal_corte_margen')) byId('modal_corte_margen').value = Number(margen).toFixed(4);
+    if (byId('modal_corte_dias')) byId('modal_corte_dias').value = dias;
+    if (byId('btnSubmitModalCorte')) byId('btnSubmitModalCorte').textContent = 'Guardar Cambios';
+
+    const modal = byId('modalCorte');
+    if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); }
+}
+
 function cerrarModalCorte() {
-    const modal = document.getElementById('modalCorte');
-    if (!modal) return;
-    modal.style.display = 'none';
-    modal.classList.remove('active');
+    const modal = byId('modalCorte');
+    if (modal) { modal.style.display = 'none'; modal.classList.remove('active'); }
 }
 
 async function guardarNuevoCorte(e) {
     e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-    
+    const formData = new FormData(e.target);
+    const hiddenCorte = byId('modal_corte_hidden');
+    if (hiddenCorte && hiddenCorte.value) formData.set('corte', hiddenCorte.value);
+
     try {
-        const res = await fetch('/api/config/cortes/agregar', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/cortes/agregar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
             cerrarModalCorte();
             await cargarListaCortes(currentModalCanal);
         } else {
-            alert('Error: ' + (data.error || 'No se pudo vincular el corte.'));
+            alert('Error: ' + (data.error || 'No se pudo guardar el corte.'));
         }
-    } catch (err) {
-        alert('Error de conexión al vincular corte.');
+    } catch {
+        alert('Error de conexión al vincular/editar corte.');
     }
 }
 
 async function eliminarCorte(codCanal, codCorte) {
     if (!confirm('¿Desea desvincular este corte de la especie?')) return;
-    
-    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     formData.append('canal', codCanal);
     formData.append('corte', codCorte);
-    
+
     try {
-        const res = await fetch('/api/config/cortes/eliminar', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/cortes/eliminar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
             await cargarListaCortes(codCanal);
         } else {
             alert('Error: ' + (data.error || 'No se pudo eliminar el corte.'));
         }
-    } catch (err) {
+    } catch {
         alert('Error al desvincular corte.');
     }
 }
@@ -288,19 +337,9 @@ async function eliminarCorte(codCanal, codCorte) {
 // Funciones para Gestión de Mesas y Líneas Operativas
 // -------------------------------------------------------------
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
 function renderizarListaMesas(mesas) {
-    const contenedor = document.getElementById('contenedorListaMesas');
-    const badgeTotal = document.getElementById('badgeTotalMesas');
+    const contenedor = byId('contenedorListaMesas');
+    const badgeTotal = byId('badgeTotalMesas');
     if (!contenedor) return;
 
     const total = mesas.length;
@@ -342,153 +381,116 @@ function renderizarListaMesas(mesas) {
 }
 
 function cancelarEdicionMesa() {
-    const idEl = document.getElementById('mesa_id');
-    const nomEl = document.getElementById('mesa_nombre');
-    const descEl = document.getElementById('mesa_descripcion');
-    const actEl = document.getElementById('mesa_activo');
-    const titEl = document.getElementById('tituloFormMesa');
-    const btnCancel = document.getElementById('btnCancelarEdicionMesa');
-    const btnGuardar = document.getElementById('btnGuardarMesa');
-
-    if (idEl) idEl.value = '';
-    if (nomEl) nomEl.value = '';
-    if (descEl) descEl.value = '';
-    if (actEl) actEl.value = '1';
-    if (titEl) titEl.textContent = 'Nueva Línea o Mesa Operativa';
-    if (btnCancel) btnCancel.style.display = 'none';
-    if (btnGuardar) btnGuardar.textContent = 'Guardar Mesa';
+    if (byId('mesa_id')) byId('mesa_id').value = '';
+    if (byId('mesa_nombre')) byId('mesa_nombre').value = '';
+    if (byId('mesa_descripcion')) byId('mesa_descripcion').value = '';
+    if (byId('mesa_activo')) byId('mesa_activo').value = '1';
+    if (byId('tituloFormMesa')) byId('tituloFormMesa').textContent = 'Nueva Línea o Mesa Operativa';
+    if (byId('btnCancelarEdicionMesa')) byId('btnCancelarEdicionMesa').style.display = 'none';
+    if (byId('btnGuardarMesa')) byId('btnGuardarMesa').textContent = 'Guardar Mesa';
 }
 
 function editarMesa(id, nombre, descripcion, activo) {
-    const idEl = document.getElementById('mesa_id');
-    const nomEl = document.getElementById('mesa_nombre');
-    const descEl = document.getElementById('mesa_descripcion');
-    const actEl = document.getElementById('mesa_activo');
-    const titEl = document.getElementById('tituloFormMesa');
-    const btnCancel = document.getElementById('btnCancelarEdicionMesa');
-    const btnGuardar = document.getElementById('btnGuardarMesa');
-
-    if (idEl) idEl.value = id;
-    if (nomEl) nomEl.value = nombre;
-    if (descEl) descEl.value = descripcion;
-    if (actEl) actEl.value = activo;
-    if (titEl) titEl.textContent = `Editar Mesa: ${nombre}`;
-    if (btnCancel) btnCancel.style.display = 'inline-block';
-    if (btnGuardar) btnGuardar.textContent = 'Actualizar Mesa';
-
-    if (nomEl) nomEl.focus();
+    if (byId('mesa_id')) byId('mesa_id').value = id;
+    if (byId('mesa_nombre')) byId('mesa_nombre').value = nombre;
+    if (byId('mesa_descripcion')) byId('mesa_descripcion').value = descripcion;
+    if (byId('mesa_activo')) byId('mesa_activo').value = activo;
+    if (byId('tituloFormMesa')) byId('tituloFormMesa').textContent = `Editar Mesa: ${nombre}`;
+    if (byId('btnCancelarEdicionMesa')) byId('btnCancelarEdicionMesa').style.display = 'inline-block';
+    if (byId('btnGuardarMesa')) byId('btnGuardarMesa').textContent = 'Actualizar Mesa';
+    byId('mesa_nombre')?.focus();
 }
 
 async function guardarMesa(e) {
     e.preventDefault();
-    const form = e.target;
-    const formData = new FormData(form);
-
     try {
-        const res = await fetch('/api/config/mesas/guardar', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/mesas/guardar', { method: 'POST', body: new FormData(e.target) });
         const data = await res.json();
         if (data.success) {
             alert(data.message || 'Mesa guardada exitosamente.');
             cancelarEdicionMesa();
-            if (data.mesas) {
-                renderizarListaMesas(data.mesas);
-            }
+            if (data.mesas) renderizarListaMesas(data.mesas);
         } else {
             alert('Error: ' + (data.error || 'No se pudo guardar la mesa'));
         }
-    } catch (err) {
+    } catch {
         alert('Error de conexión al guardar la mesa.');
     }
 }
 
 async function toggleEstadoMesa(id, nuevoActivo) {
-    const csrfTokenEl = document.querySelector('input[name="csrf_token"]');
-    const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
-
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     formData.append('id', id);
     formData.append('activo', nuevoActivo);
 
     try {
-        const res = await fetch('/api/config/mesas/estado', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/mesas/estado', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.success) {
-            if (data.mesas) {
-                renderizarListaMesas(data.mesas);
-            }
-        } else {
-            alert('Error: ' + (data.error || 'No se pudo modificar el estado'));
-        }
-    } catch (err) {
+        if (data.success && data.mesas) renderizarListaMesas(data.mesas);
+        else if (!data.success) alert('Error: ' + (data.error || 'No se pudo modificar el estado'));
+    } catch {
         alert('Error de conexión al cambiar estado de la mesa.');
     }
 }
 
 async function eliminarMesa(id, nombre) {
-    if (!confirm(`¿Está seguro de eliminar la mesa "${nombre}"? Esta acción solo es posible si no tiene órdenes de desposte asociadas.`)) {
-        return;
-    }
-
-    const csrfTokenEl = document.querySelector('input[name="csrf_token"]');
-    const csrfToken = csrfTokenEl ? csrfTokenEl.value : '';
-
+    if (!confirm(`¿Está seguro de eliminar la mesa "${nombre}"? Esta acción solo es posible si no tiene órdenes de desposte asociadas.`)) return;
     const formData = new FormData();
-    formData.append('csrf_token', csrfToken);
+    formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     formData.append('id', id);
 
     try {
-        const res = await fetch('/api/config/mesas/eliminar', {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch('/api/config/mesas/eliminar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
             alert(data.message || 'Mesa eliminada correctamente.');
-            if (data.mesas) {
-                renderizarListaMesas(data.mesas);
-            }
+            if (data.mesas) renderizarListaMesas(data.mesas);
         } else {
             alert('Error: ' + (data.error || 'No se pudo eliminar la mesa'));
         }
-    } catch (err) {
+    } catch {
         alert('Error de conexión al eliminar la mesa.');
     }
 }
 
-// Inicialización de Event Listeners (sin inline handlers, 100% CSP compliant)
+// -------------------------------------------------------------
+// Inicialización de Event Listeners (100% CSP compliant)
+// -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
     cargarProductosEspecie();
 
-    // Pestañas
     document.addEventListener('click', (e) => {
         const tabBtn = e.target.closest('.tab-btn[data-tab]');
-        if (tabBtn) {
-            switchConfigTab(tabBtn.dataset.tab, tabBtn);
+        if (tabBtn) { switchConfigTab(tabBtn.dataset.tab, tabBtn); return; }
+
+        if (e.target.closest('[data-action="cerrar-modal-corte"]')) { cerrarModalCorte(); return; }
+
+        const btnEditarEsp = e.target.closest('.btn-editar-especie');
+        if (btnEditarEsp) {
+            const d = btnEditarEsp.dataset;
+            editarEspecie(d.codprod, d.nombre, d.merma, d.margen, d.refrig, d.congel, d.activo);
             return;
         }
 
-        const btnCerrarModal = e.target.closest('[data-action="cerrar-modal-corte"]');
-        if (btnCerrarModal) {
-            cerrarModalCorte();
+        if (e.target.closest('#btnCancelarEdicionEspecie') || e.target.closest('#btnNuevaEspecie')) {
+            limpiarFormEspecie();
             return;
         }
 
         const btnAdmin = e.target.closest('.btn-admin-cortes');
-        if (btnAdmin && btnAdmin.dataset.canal) {
-            administrarCortes(btnAdmin.dataset.canal);
-            return;
-        }
+        if (btnAdmin && btnAdmin.dataset.canal) { administrarCortes(btnAdmin.dataset.canal); return; }
 
         const btnAbrirModal = e.target.closest('.btn-abrir-modal-corte');
         if (btnAbrirModal && btnAbrirModal.dataset.canal) {
-            abrirModalAgregarCorte(btnAbrirModal.dataset.canal);
+            abrirModalAgregarCorte(btnAbrirModal.dataset.canal, btnAbrirModal.dataset.nombre);
+            return;
+        }
+
+        const btnEditarCorte = e.target.closest('.btn-editar-corte');
+        if (btnEditarCorte) {
+            const d = btnEditarCorte.dataset;
+            abrirModalEditarCorte(d.canal, d.corte, d.nombre, d.rendimiento, d.margen, d.dias);
             return;
         }
 
@@ -498,74 +500,40 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const btnNuevaEsp = e.target.closest('#btnNuevaEspecie');
-        if (btnNuevaEsp) {
-            limpiarFormEspecie();
-            return;
-        }
-
         const btnEditarMesa = e.target.closest('.btn-editar-mesa');
         if (btnEditarMesa) {
-            editarMesa(
-                parseInt(btnEditarMesa.dataset.id, 10),
-                btnEditarMesa.dataset.nombre,
-                btnEditarMesa.dataset.descripcion,
-                btnEditarMesa.dataset.activo
-            );
+            editarMesa(parseInt(btnEditarMesa.dataset.id, 10), btnEditarMesa.dataset.nombre, btnEditarMesa.dataset.descripcion, btnEditarMesa.dataset.activo);
             return;
         }
 
-        const btnCancelMesa = e.target.closest('#btnCancelarEdicionMesa');
-        if (btnCancelMesa) {
-            cancelarEdicionMesa();
-            return;
-        }
+        if (e.target.closest('#btnCancelarEdicionMesa')) { cancelarEdicionMesa(); return; }
 
         const btnToggleMesa = e.target.closest('.btn-toggle-mesa');
         if (btnToggleMesa) {
-            toggleEstadoMesa(
-                parseInt(btnToggleMesa.dataset.id, 10),
-                parseInt(btnToggleMesa.dataset.activo, 10)
-            );
+            toggleEstadoMesa(parseInt(btnToggleMesa.dataset.id, 10), parseInt(btnToggleMesa.dataset.activo, 10));
             return;
         }
 
         const btnEliminarMesa = e.target.closest('.btn-eliminar-mesa');
         if (btnEliminarMesa) {
-            eliminarMesa(
-                parseInt(btnEliminarMesa.dataset.id, 10),
-                btnEliminarMesa.dataset.nombre
-            );
+            eliminarMesa(parseInt(btnEliminarMesa.dataset.id, 10), btnEliminarMesa.dataset.nombre);
             return;
         }
     });
 
-    // Inputs dinámicos de correlativos
     document.addEventListener('input', (e) => {
         const inputCorr = e.target.closest('.corr-input');
-        if (inputCorr && inputCorr.dataset.tipo) {
-            actualizarPreviewCorrelativo(inputCorr.dataset.tipo);
-        }
+        if (inputCorr && inputCorr.dataset.tipo) actualizarPreviewCorrelativo(inputCorr.dataset.tipo);
     });
 
-    // Formularios
-    const formConfigGen = document.getElementById('formConfigGeneral');
-    if (formConfigGen) formConfigGen.addEventListener('submit', guardarConfigGeneral);
-
-    const formEsp = document.getElementById('formEspecie');
-    if (formEsp) formEsp.addEventListener('submit', guardarEspecie);
-
-    const formAddCorte = document.getElementById('formAgregarCorte');
-    if (formAddCorte) formAddCorte.addEventListener('submit', guardarNuevoCorte);
-
-    const formMesa = document.getElementById('formMesa');
-    if (formMesa) formMesa.addEventListener('submit', guardarMesa);
+    byId('formConfigGeneral')?.addEventListener('submit', guardarConfigGeneral);
+    byId('formEspecie')?.addEventListener('submit', guardarEspecie);
+    byId('formAgregarCorte')?.addEventListener('submit', guardarNuevoCorte);
+    byId('formMesa')?.addEventListener('submit', guardarMesa);
 
     document.querySelectorAll('.form-correlativo').forEach(f => {
         f.addEventListener('submit', (e) => guardarCorrelativo(e, f));
     });
 
-    // Filtro de instancia
-    const filtroInst = document.getElementById('filtro_instancia');
-    if (filtroInst) filtroInst.addEventListener('change', cargarProductosEspecie);
+    byId('filtro_instancia')?.addEventListener('change', cargarProductosEspecie);
 });

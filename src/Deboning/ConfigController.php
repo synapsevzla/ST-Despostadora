@@ -147,6 +147,9 @@ final class ConfigController
 
         try {
             $codProd = trim((string)($_POST['codprod'] ?? ''));
+            if ($codProd === '' && !empty($_POST['codprod_hidden'])) {
+                $codProd = trim((string)$_POST['codprod_hidden']);
+            }
             $codMerma = trim((string)($_POST['codprod_merma'] ?? ''));
             $margen = round((float)($_POST['margen'] ?? 30.0), 4);
             $diasRefrig = (int)($_POST['dias_refrig'] ?? 15);
@@ -194,12 +197,15 @@ final class ConfigController
         try {
             $canal = trim((string)($_POST['canal'] ?? ''));
             $corte = trim((string)($_POST['corte'] ?? ''));
+            if ($corte === '' && !empty($_POST['corte_hidden'])) {
+                $corte = trim((string)$_POST['corte_hidden']);
+            }
             $rend = round((float)($_POST['rendimiento'] ?? 0.0), 4);
             $margen = round((float)($_POST['margen'] ?? 30.0), 4);
             $dias = (int)($_POST['dias_vencimiento'] ?? 15);
 
             ConfigService::addSpeciesCut($canal, $corte, $rend, $margen, $dias, $user['codusua']);
-            echo json_encode(['success' => true, 'message' => 'Corte asociado exitosamente.']);
+            echo json_encode(['success' => true, 'message' => 'Corte procesado exitosamente.']);
         } catch (Throwable $e) {
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }

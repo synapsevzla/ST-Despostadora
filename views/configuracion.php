@@ -164,9 +164,9 @@ ob_start();
         <div style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
             
             <!-- Formulario para Registrar / Editar Especie de Canal -->
-            <div class="card">
-                <h4 style="margin-bottom: 1rem; color: var(--text-primary); font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between;">
-                    <span>Configurar Especie / Canal de Entrada</span>
+            <div class="card" id="cardFormEspecie">
+                <h4 style="margin-bottom: 1rem; color: var(--text-primary); font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                    <span id="tituloFormEspecie">Configurar Especie / Canal de Entrada</span>
                     <button type="button" class="btn" id="btnNuevaEspecie" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); font-size: 0.85rem; padding: 0.4rem 0.75rem;">
                         + Nueva Especie
                     </button>
@@ -174,6 +174,7 @@ ob_start();
 
                 <form id="formEspecie">
                     <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token) ?>">
+                    <input type="hidden" name="codprod_hidden" id="esp_codprod_hidden" value="">
 
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                         <div class="form-group" style="margin-bottom: 0;">
@@ -223,8 +224,11 @@ ob_start();
                         </div>
                     </div>
 
-                    <div style="text-align: right;">
-                        <button type="submit" class="btn btn-primary" style="width: auto; min-width: 160px;">
+                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
+                        <button type="button" id="btnCancelarEdicionEspecie" class="btn" style="display: none; background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); width: auto;">
+                            Cancelar Edición
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btnGuardarEspecie" style="width: auto; min-width: 160px;">
                             Guardar Especie
                         </button>
                     </div>
@@ -245,17 +249,33 @@ ob_start();
                             <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 10px; padding: 1.25rem;">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
                                     <div>
-                                        <h5 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">
-                                            [<?= Security::escape($esp['CodProd']) ?>] <?= Security::escape($esp['NombreEspecie']) ?>
-                                        </h5>
+                                        <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                            <h5 style="margin: 0; font-size: 1.1rem; color: var(--text-primary); font-weight: 700;">
+                                                [<?= Security::escape($esp['CodProd']) ?>] <?= Security::escape($esp['NombreEspecie']) ?>
+                                            </h5>
+                                            <span class="badge <?= (int)$esp['Activo'] === 1 ? 'badge-success' : 'badge-warning' ?>" style="font-size: 0.7rem;">
+                                                <?= (int)$esp['Activo'] === 1 ? 'ACTIVA' : 'INACTIVA' ?>
+                                            </span>
+                                        </div>
                                         <div style="display: flex; gap: 1rem; font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem; flex-wrap: wrap;">
                                             <span>Unidad: <strong><?= Security::escape($esp['Unidad']) ?></strong></span>
                                             <span>Costo Actual: <strong>$<?= number_format((float)$esp['CostActCanal'], 4) ?></strong></span>
                                             <span>Merma Asignada: <strong style="color: var(--danger);"><?= Security::escape($esp['NombreMerma'] ?: $esp['CodProdMerma']) ?></strong></span>
+                                            <span>Margen Default: <strong><?= number_format((float)$esp['MargenUtilidadDefault'], 2) ?>%</strong></span>
                                             <span>Cortes Asociados: <strong style="color: var(--primary);"><?= (int)$esp['TotalCortes'] ?></strong></span>
                                         </div>
                                     </div>
-                                    <div style="display: flex; gap: 0.5rem;">
+                                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                        <button type="button" class="btn btn-outline btn-editar-especie" style="padding: 0.4rem 0.75rem; font-size: 0.85rem; width: auto;"
+                                                data-codprod="<?= Security::escape($esp['CodProd']) ?>"
+                                                data-nombre="<?= Security::escape($esp['NombreEspecie']) ?>"
+                                                data-merma="<?= Security::escape($esp['CodProdMerma']) ?>"
+                                                data-margen="<?= (float)$esp['MargenUtilidadDefault'] ?>"
+                                                data-refrig="<?= (int)$esp['DiasVencimientoRefrig'] ?>"
+                                                data-congel="<?= (int)$esp['DiasVencimientoCongel'] ?>"
+                                                data-activo="<?= (int)$esp['Activo'] ?>">
+                                            Editar Especie
+                                        </button>
                                         <button type="button" class="btn btn-admin-cortes" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.85rem; padding: 0.4rem 0.75rem;" 
                                                 data-canal="<?= Security::escape($esp['CodProd']) ?>" data-nombre="<?= Security::escape($esp['NombreEspecie']) ?>">
                                             Gestionar Cortes
@@ -267,7 +287,8 @@ ob_start();
                                 <div id="panel_cortes_<?= Security::escape($esp['CodProd']) ?>" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px dashed var(--border-color);">
                                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                                         <h6 style="margin: 0; font-size: 0.95rem; color: var(--accent);">Matriz de Cortes Asignados</h6>
-                                        <button type="button" class="btn btn-primary btn-abrir-modal-corte" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;" data-canal="<?= Security::escape($esp['CodProd']) ?>">
+                                        <button type="button" class="btn btn-primary btn-abrir-modal-corte" style="padding: 0.35rem 0.65rem; font-size: 0.8rem; width: auto;" 
+                                                data-canal="<?= Security::escape($esp['CodProd']) ?>" data-nombre="<?= Security::escape($esp['NombreEspecie']) ?>">
                                             + Asociar Corte
                                         </button>
                                     </div>
@@ -402,51 +423,57 @@ ob_start();
     </div>
 </div>
 
-<!-- Modal para Asociar Corte a Especie -->
+<!-- Modal para Asociar / Editar Corte de Especie -->
 <div id="modalCorte" class="sidebar-overlay" style="display: none; align-items: center; justify-content: center; z-index: 100;">
     <div class="card" style="max-width: 520px; width: 90%; max-height: 90vh; overflow-y: auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <h4 style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Asociar Corte a Especie</h4>
+            <h4 id="tituloModalCorte" style="margin: 0; font-size: 1.15rem; color: var(--text-primary);">Asociar Corte a Especie</h4>
             <button type="button" data-action="cerrar-modal-corte" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1.4rem;">&times;</button>
         </div>
         
         <form id="formAgregarCorte">
             <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token) ?>">
             <input type="hidden" name="canal" id="modal_canal_cod">
+            <input type="hidden" name="corte_hidden" id="modal_corte_hidden" value="">
 
             <div class="form-group">
                 <label class="form-label">Especie Canal</label>
                 <input type="text" id="modal_canal_nombre" class="form-input" readonly style="opacity: 0.8;">
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="grupo_modal_sel_corte">
                 <label class="form-label">Seleccionar Corte (SAPROD)</label>
                 <select name="corte" id="modal_sel_corte" class="form-input" required>
                     <option value="">-- Cargando cortes disponibles --</option>
                 </select>
             </div>
 
+            <div class="form-group" id="grupo_modal_corte_estatico" style="display: none;">
+                <label class="form-label">Corte Seleccionado</label>
+                <input type="text" id="modal_corte_nombre_estatico" class="form-input" readonly style="opacity: 0.9; font-weight: 600;">
+            </div>
+
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                 <div class="form-group">
                     <label class="form-label">% Rendimiento Esperado</label>
-                    <input type="number" step="0.0001" min="0" max="100" name="rendimiento" class="form-input" value="0.0000" required>
+                    <input type="number" step="0.0001" min="0" max="100" name="rendimiento" id="modal_corte_rendimiento" class="form-input" value="0.0000" required>
                 </div>
                 <div class="form-group">
                     <label class="form-label">Margen Utilidad (%)</label>
-                    <input type="number" step="0.0001" min="0" max="100" name="margen" class="form-input" value="30.0000" required>
+                    <input type="number" step="0.0001" min="0" max="100" name="margen" id="modal_corte_margen" class="form-input" value="30.0000" required>
                 </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Días de Vida Útil / Vencimiento</label>
-                <input type="number" name="dias_vencimiento" class="form-input" value="15" min="1" required>
+                <input type="number" name="dias_vencimiento" id="modal_corte_dias" class="form-input" value="15" min="1" required>
             </div>
 
             <div style="display: flex; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem;">
                 <button type="button" class="btn" data-action="cerrar-modal-corte" style="background: var(--bg-sidebar); border: 1px solid var(--border-color); color: var(--text-secondary); width: auto;">
                     Cancelar
                 </button>
-                <button type="submit" class="btn btn-primary" style="width: auto;">
+                <button type="submit" class="btn btn-primary" id="btnSubmitModalCorte" style="width: auto;">
                     Vincular Corte
                 </button>
             </div>
