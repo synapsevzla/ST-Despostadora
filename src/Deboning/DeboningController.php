@@ -266,7 +266,7 @@ final class DeboningController
 
             echo json_encode([
                 'success' => true,
-                'message' => "Orden de desposte {$nroOrden} cerrada exitosamente. Documentos en espera (Descargo de Canal y Cargo de Cortes) colocados en Saint ERP."
+                'message' => "Orden de desposte {$nroOrden} cerrada exitosamente. Documentos en espera (Descargo de Canal y Cargo de Cortes y Merma) colocados en Saint ERP."
             ]);
         } catch (Throwable $e) {
             if (Database::isConnectionError($e)) {

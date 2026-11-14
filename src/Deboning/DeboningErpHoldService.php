@@ -8,6 +8,7 @@ use RuntimeException;
 use Src\Utils\AuditService;
 
 require_once __DIR__ . '/ConfigService.php';
+require_once __DIR__ . '/CorrelativeService.php';
 
 /**
  * Servicio autónomo encargado de generar y conciliar los Documentos en Espera dobles
@@ -298,6 +299,94 @@ final class DeboningErpHoldService
             $stmtItem->execute();
 
             $nroLineaCorte++;
+        }
+
+        // =====================================================================
+        // 6.1 INSERTAR RENGLÓN DE MERMA DE DESPOSTE EN DOCUMENTO DE CARGO
+        // =====================================================================
+        // Opción A: Cuadre físico estricto (100% de kilos) ingresando la merma
+        // a costo 0.00 dado que su valor monetario fue absorbido por los cortes.
+        $pesoCortesTotal = 0.0;
+        foreach ($cortes as $c) {
+            $pesoCortesTotal += (float)($c['PesoNeto'] ?? 0.0);
+        }
+        $pesoMerma = isset($ord['PesoMerma'])
+            ? round((float)$ord['PesoMerma'], 4)
+            : round($pesoCanalEntrada - $pesoCortesTotal, 4);
+
+        if ($pesoMerma > 0.0001) {
+            $stmtMermaConfig = $pdo->prepare("SELECT ec.CodProdMerma, p.Descrip, p.Descrip2, p.Descrip3, p.Refere,
+                                                     ISNULL(p.DEsComp, 0) AS DEsComp, ISNULL(p.EsPesa, 0) AS EsPesa,
+                                                     ISNULL(p.EsExento, 1) AS EsExento, ISNULL(p.DEsLote, 0) AS DEsLote,
+                                                     ISNULL(p.DEsSeri, 0) AS DEsSeri
+                                              FROM ST_Despostadora_EspeciesConfig ec
+                                              INNER JOIN SAPROD p ON p.CodProd = ec.CodProdMerma
+                                              WHERE ec.CodProd = :canal");
+            $stmtMermaConfig->bindValue(':canal', $codProdCanal, PDO::PARAM_STR);
+            $stmtMermaConfig->execute();
+            $mermaInfo = $stmtMermaConfig->fetch(PDO::FETCH_ASSOC);
+
+            if (!$mermaInfo) {
+                throw new RuntimeException("La especie canal '{$codProdCanal}' no tiene configurado un producto de merma válido en el ERP.");
+            }
+
+            $codProdMerma = trim((string)$mermaInfo['CodProdMerma']);
+            $esCompuestoMerma = ((int)$mermaInfo['DEsComp'] === 1);
+            $nroLoteMerma = CorrelativeService::generateBatchNumber($pdo, $nroOrden, 99);
+
+            if ($esCompuestoMerma) {
+                $mermaCodItem  = $codProdCanal;
+                $mermaDesc1    = $desc1Canal;
+                $mermaDesc2    = $desc2Canal;
+                $mermaDesc3    = $desc3Canal;
+                $mermaDesc4    = mb_substr($codProdMerma, 0, 40);
+                $mermaDesc6    = mb_substr(trim((string)$mermaInfo['Descrip']), 0, 40);
+                $mermaDesc9    = 'MERMA COMPUESTA';
+                $mermaRefere   = $refCanal;
+                $mermaEsPesa   = (int)$prodCanal['EsPesa'];
+                $mermaEsExento = (int)$prodCanal['EsExento'];
+                $mermaDesLote  = (int)$prodCanal['DEsLote'];
+                $mermaDesSeri  = (int)$prodCanal['DEsSeri'];
+            } else {
+                $mermaCodItem  = $codProdMerma;
+                $mermaDesc1    = mb_substr((string)$mermaInfo['Descrip'], 0, 40);
+                $mermaDesc2    = mb_substr((string)$mermaInfo['Descrip2'], 0, 40);
+                $mermaDesc3    = mb_substr((string)$mermaInfo['Descrip3'], 0, 40);
+                $mermaDesc4    = null;
+                $mermaDesc6    = null;
+                $mermaDesc9    = 'MERMA DESPOSTE';
+                $mermaRefere   = mb_substr(trim((string)($mermaInfo['Refere'] ?: $codProdMerma)), 0, 20);
+                $mermaEsPesa   = (int)$mermaInfo['EsPesa'];
+                $mermaEsExento = (int)$mermaInfo['EsExento'];
+                $mermaDesLote  = (int)$mermaInfo['DEsLote'];
+                $mermaDesSeri  = (int)$mermaInfo['DEsSeri'];
+            }
+
+            $stmtItem->bindValue(':numerod', $numeroDCargo, PDO::PARAM_STR);
+            $stmtItem->bindValue(':nrolinea', $nroLineaCorte, PDO::PARAM_INT);
+            $stmtItem->bindValue(':coditem', $mermaCodItem, PDO::PARAM_STR);
+            $stmtItem->bindValue(':codubic', $codUbicClean, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc1', $mermaDesc1, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc2', $mermaDesc2, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc3', $mermaDesc3, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc4', $mermaDesc4, $mermaDesc4 !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtItem->bindValue(':desc5', $nroOrden, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc6', $mermaDesc6, $mermaDesc6 !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+            $stmtItem->bindValue(':desc7', $mermaCodItem, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc8', (string)$nroLineaCorte, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc9', $mermaDesc9, PDO::PARAM_STR);
+            $stmtItem->bindValue(':desc10', $descrip10Cargo, PDO::PARAM_STR);
+            $stmtItem->bindValue(':refere', $mermaRefere, PDO::PARAM_STR);
+            $stmtItem->bindValue(':signo', 1, PDO::PARAM_INT);
+            $stmtItem->bindValue(':cantidad', $pesoMerma, PDO::PARAM_STR);
+            $stmtItem->bindValue(':costo', 0.0, PDO::PARAM_STR);
+            $stmtItem->bindValue(':totalitem', 0.0, PDO::PARAM_STR);
+            $stmtItem->bindValue(':nrolote', $nroLoteMerma, PDO::PARAM_STR);
+            $stmtItem->bindValue(':espesa', $mermaEsPesa, PDO::PARAM_INT);
+            $stmtItem->bindValue(':esexento', $mermaEsExento, PDO::PARAM_INT);
+            $stmtItem->bindValue(':deslote', $mermaDesLote, PDO::PARAM_INT);
+            $stmtItem->bindValue(':desseri', $mermaDesSeri, PDO::PARAM_INT);
+            $stmtItem->execute();
         }
 
         // 7. Actualizar banderas en ST_Despostadora_Despostes

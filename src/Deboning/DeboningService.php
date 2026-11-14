@@ -392,6 +392,10 @@ final class DeboningService
         $stmtMerma->execute();
         $codProdMerma = (string)($stmtMerma->fetch(PDO::FETCH_ASSOC)['CodProdMerma'] ?? '');
 
+        if ($codProdMerma === '' && (float)($ord['PesoMerma'] ?? 0.0) > 0.0001) {
+            throw new RuntimeException("La especie canal '{$ord['CodProdCanal']}' no tiene configurado un producto de merma.");
+        }
+
         $pdo->beginTransaction();
         try {
             $stmtUpdDet = $pdo->prepare("UPDATE ST_Despostadora_DespostesDetalle

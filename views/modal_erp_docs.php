@@ -61,7 +61,7 @@ declare(strict_types=1);
             <div class="card" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); padding:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
                     <strong style="font-size:0.95rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
-                        <span style="color:#66bb6a;"> </span> Cargo de Cortes
+                        <span style="color:#66bb6a;"> </span> Cargo de Cortes y Merma
                     </strong>
                     <span id="erpModalCargoStatusBadge" class="badge">EN ESPERA</span>
                 </div>
