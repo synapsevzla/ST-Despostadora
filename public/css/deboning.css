@@ -1,0 +1,591 @@
+/* ST-Despostadora - Estilos para Sala de Desposte y Pesaje Táctil */
+/* Modular, Touch-Friendly y optimizado para pantallas compactas, POS 800x600 y Móviles */
+
+/* Ocultar encabezado superior del tablero general siempre en modo estación para ganar 100px */
+body.station-active .content-header {
+    display: none !important;
+}
+
+/* Evitar que tablas con muchas columnas expandan el layout más allá del ancho del viewport */
+.deboning-station-workspace,
+.station-panel,
+.station-panel-weigh,
+.station-panel-list,
+.station-table-container {
+    min-width: 0 !important;
+    max-width: 100% !important;
+}
+
+.station-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.deboning-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.deboning-metric-card {
+    padding: 0.85rem 1rem;
+    text-align: center;
+}
+
+.deboning-metric-card .stat-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.deboning-metric-card .stat-val {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 0.2rem;
+}
+
+.deboning-metric-card .stat-val.stat-primary { color: var(--primary); }
+.deboning-metric-card .stat-val.stat-danger { color: var(--danger); }
+.deboning-metric-card .stat-val.stat-success { color: var(--success); }
+.deboning-metric-card .stat-val.stat-accent { color: #d8865e; }
+
+.deboning-metric-card .stat-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+    margin-top: 0.15rem;
+}
+
+.deboning-metric-card .stat-sub.stat-danger { color: var(--danger); }
+
+.deboning-station-workspace {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.station-tabs-nav {
+    display: none;
+    margin-bottom: 0.85rem;
+    gap: 0.5rem;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 0.35rem;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.station-tab-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.65rem 0.75rem;
+    font-size: 0.92rem;
+    font-weight: 700;
+    border-radius: 6px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.station-tab-btn.active {
+    background: var(--primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(244, 107, 58, 0.35);
+}
+
+.cuts-button-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.55rem;
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 0.85rem;
+    padding-right: 4px;
+}
+
+/* Campo Input de la Calculadora / Balanza - 100% Fluido y Responsivo */
+.weigh-input-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 0.75rem;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+}
+
+.weigh-input,
+#weighInput {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    display: block !important;
+    box-sizing: border-box !important;
+    font-size: 2rem;
+    font-weight: 800;
+    text-align: right;
+    padding: 0.65rem 3.5rem 0.65rem 1rem;
+    height: auto;
+    color: var(--text-primary);
+    background-color: #271e1a;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color var(--transition-speed), box-shadow var(--transition-speed);
+}
+
+.weigh-input:focus,
+#weighInput:focus {
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 3px rgba(244, 107, 58, 0.25);
+}
+
+.weigh-unit-badge {
+    position: absolute;
+    right: 1.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    pointer-events: none;
+    user-select: none;
+}
+
+.keypad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.45rem;
+    margin-bottom: 0.85rem;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.keypad-btn {
+    height: 46px;
+    font-size: 1.25rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #372a25;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.15s, transform 0.05s;
+}
+
+.keypad-btn:active {
+    background-color: var(--primary);
+    color: #fff;
+    transform: scale(0.96);
+}
+
+.cut-btn {
+    padding: 0.55rem 0.5rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-align: center;
+    border-radius: 8px;
+    background: #372a25;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    word-break: break-word;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cut-btn:hover, .cut-btn.selected {
+    background: #4e3d36;
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.cut-btn.selected {
+    border-width: 2px;
+    box-shadow: 0 0 10px rgba(244, 107, 58, 0.35);
+}
+
+.mesa-select-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary-hover);
+}
+
+/* Contenedores de Listado de Cortes: Tabla (Desktop) vs Cards (Compacto/Móvil) */
+.station-table-container {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    max-height: 480px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.station-cards-container {
+    display: none;
+    flex-direction: column;
+    gap: 0.65rem;
+    width: 100%;
+    max-height: 480px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+/* Tarjetas Táctiles de Cortes Individuales */
+.cut-item-card {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: border-color 0.2s;
+}
+
+.cut-item-card:hover {
+    border-color: rgba(244, 107, 58, 0.4);
+}
+
+.cut-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(85, 67, 58, 0.45);
+}
+
+.cut-card-badge {
+    background: #55433a;
+    color: var(--text-primary);
+    font-weight: 800;
+    font-size: 0.8rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+}
+
+.cut-card-title {
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+.cut-card-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.45rem;
+    background: rgba(0, 0, 0, 0.15);
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+}
+
+.cut-card-stat {
+    display: flex;
+    flex-direction: column;
+}
+
+.cut-card-stat-lbl {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.cut-card-stat-val {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 0.1rem;
+}
+
+.cut-card-stat-val.val-primary { color: var(--primary); }
+.cut-card-stat-val.val-success { color: var(--success); }
+.cut-card-stat-val.val-highlight { color: #f6ebd5; }
+.cut-card-stat-val.val-accent { color: var(--accent); }
+
+.cut-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 0.25rem;
+}
+
+.cut-card-venc {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: inline-flex;
+    align-items: center;
+}
+
+.cut-item-del-btn {
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    color: var(--danger);
+    border-color: rgba(238, 103, 55, 0.4);
+    min-height: 32px;
+}
+
+.cut-item-del-btn:hover {
+    background: rgba(238, 103, 55, 0.15);
+    border-color: var(--danger);
+}
+
+/* Optimización para Pantallas de Ancho Reducido o Tablets (ancho <= 1024px) */
+@media (max-width: 1024px) {
+    body.station-active .content-body {
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    .station-top-bar {
+        padding: 0.6rem 0.85rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .deboning-metrics-grid {
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 0.35rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .deboning-metric-card {
+        padding: 0.35rem 0.4rem !important;
+        border-radius: 6px !important;
+    }
+
+    .deboning-metric-card .stat-label {
+        font-size: 0.65rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .deboning-metric-card .stat-val {
+        font-size: 1.1rem !important;
+        margin-top: 0.1rem !important;
+    }
+
+    .deboning-metric-card .stat-sub {
+        font-size: 0.65rem !important;
+        margin-top: 0.05rem !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .station-tabs-nav {
+        display: flex !important;
+    }
+
+    .deboning-station-workspace {
+        display: block !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .station-panel {
+        display: none !important;
+    }
+
+    .station-panel.active {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .station-table-container {
+        display: none !important;
+    }
+
+    .station-cards-container {
+        display: flex !important;
+    }
+
+    .cuts-button-grid {
+        max-height: 125px !important;
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
+        gap: 0.35rem !important;
+    }
+
+    .cut-btn {
+        min-height: 38px !important;
+        font-size: 0.78rem !important;
+    }
+
+    .keypad-btn {
+        height: 42px !important;
+        font-size: 1.15rem !important;
+    }
+
+    .weigh-input,
+    #weighInput {
+        font-size: 1.6rem !important;
+        padding: 0.5rem 3rem 0.5rem 0.75rem !important;
+    }
+
+    .weigh-unit-badge {
+        right: 1rem !important;
+        font-size: 1rem !important;
+    }
+
+    #btnRegisterCut {
+        height: 46px !important;
+        font-size: 1.05rem !important;
+    }
+}
+
+/* Optimización para Pantallas de Baja Altura (POS 800x600, 1024x600, laptops pequeñas) */
+@media (max-height: 650px) {
+    body.station-active .main-header {
+        height: 40px !important;
+        padding: 0 0.75rem !important;
+    }
+
+    body.station-active .content-body {
+        padding: 0.25rem 0.5rem !important;
+    }
+
+    .station-top-bar {
+        padding: 0.35rem 0.6rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    .deboning-metrics-grid {
+        grid-template-columns: repeat(5, 1fr) !important;
+        gap: 0.25rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    .deboning-metric-card {
+        padding: 0.2rem 0.3rem !important;
+    }
+
+    .deboning-metric-card .stat-val {
+        font-size: 0.95rem !important;
+        margin-top: 0 !important;
+    }
+
+    .deboning-metric-card .stat-label {
+        font-size: 0.6rem !important;
+    }
+
+    .deboning-metric-card .stat-sub {
+        display: none !important;
+    }
+
+    .station-tabs-nav {
+        display: flex !important;
+        margin-bottom: 0.35rem !important;
+        padding: 0.2rem !important;
+    }
+
+    .station-tab-btn {
+        padding: 0.35rem 0.5rem !important;
+        font-size: 0.82rem !important;
+    }
+
+    .deboning-station-workspace {
+        display: block !important;
+        margin-bottom: 0.25rem !important;
+    }
+
+    .station-panel {
+        display: none !important;
+    }
+
+    .station-panel.active {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .station-panel-weigh h3 {
+        display: none !important;
+    }
+
+    .cuts-button-grid {
+        max-height: 75px !important;
+        gap: 0.25rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    .cut-btn {
+        min-height: 32px !important;
+        font-size: 0.74rem !important;
+        padding: 0.2rem 0.3rem !important;
+    }
+
+    #selectedCutDisplay {
+        font-size: 0.88rem !important;
+    }
+
+    .weigh-input,
+    #weighInput {
+        font-size: 1.4rem !important;
+        padding: 0.3rem 2.5rem 0.3rem 0.6rem !important;
+    }
+
+    .weigh-unit-badge {
+        right: 0.85rem !important;
+        font-size: 0.95rem !important;
+    }
+
+    .keypad-grid {
+        gap: 0.25rem !important;
+        margin-bottom: 0.35rem !important;
+    }
+
+    .keypad-btn {
+        height: 34px !important;
+        font-size: 1.05rem !important;
+    }
+
+    #btnRegisterCut {
+        height: 38px !important;
+        font-size: 0.95rem !important;
+    }
+}
+
+/* Optimización extra para Móviles (<= 576px) */
+@media (max-width: 576px) {
+    .deboning-metrics-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .deboning-metrics-grid > div:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .station-top-bar > div {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.5rem !important;
+    }
+
+    .station-top-bar > div > div:last-child {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .station-tab-btn {
+        font-size: 0.82rem !important;
+        padding: 0.45rem 0.3rem !important;
+    }
+
+    .station-tab-btn svg {
+        display: none !important;
+    }
+}

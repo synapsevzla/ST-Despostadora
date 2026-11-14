@@ -50,28 +50,54 @@ function switchView(view) {
     const vBoard = document.getElementById('viewBoard');
     const vStation = document.getElementById('viewStation');
     if (view === 'board') {
+        document.body.classList.remove('station-active');
         vBoard.style.display = 'block';
         vStation.style.display = 'none';
         refreshActiveOrders();
     } else {
+        document.body.classList.add('station-active');
         vBoard.style.display = 'none';
         vStation.style.display = 'block';
+        switchStationTab('weigh');
+    }
+}
+
+function switchStationTab(tab) {
+    const btnWeigh = document.getElementById('tabBtnWeigh');
+    const btnList = document.getElementById('tabBtnList');
+    const panelWeigh = document.getElementById('stationPanelWeigh');
+    const panelList = document.getElementById('stationPanelList');
+    if (!btnWeigh || !btnList || !panelWeigh || !panelList) return;
+
+    if (tab === 'list') {
+        btnWeigh.classList.remove('active');
+        btnList.classList.add('active');
+        panelWeigh.classList.remove('active');
+        panelList.classList.add('active');
+    } else {
+        btnList.classList.remove('active');
+        btnWeigh.classList.add('active');
+        panelList.classList.remove('active');
+        panelWeigh.classList.add('active');
     }
 }
 
 function pressKeypad(key) {
     const input = document.getElementById('weighInput');
     if (!input) return;
+    let val = (input.value || '').trim();
     if (key === 'C') {
         input.value = '';
     } else if (key === '.') {
-        if (!input.value.includes('.')) input.value = (input.value === '') ? '0.' : input.value + '.';
+        if (!val.includes('.')) {
+            input.value = (val === '') ? '0.' : val + '.';
+        }
     } else {
-        if (input.value.includes('.')) {
-            const decimals = input.value.split('.')[1] || '';
+        if (val.includes('.')) {
+            const decimals = val.split('.')[1] || '';
             if (decimals.length >= 4) return; // Máximo 4 decimales
         }
-        input.value += key;
+        input.value = (val === '0') ? key : val + key;
     }
     input.focus();
 }
@@ -234,6 +260,8 @@ function renderBalanceAndTable(balance) {
     document.getElementById('statCostoCanal').textContent = `$${parseFloat(ord.CostActCanal).toFixed(2)} /kg`;
     document.getElementById('statPesoCortes').textContent = `${parseFloat(ord.PesoTotalCortes).toFixed(4)} kg`;
     document.getElementById('statCantCortes').textContent = cortes.length.toString();
+    const statTabCount = document.getElementById('stationTabCount');
+    if (statTabCount) statTabCount.textContent = cortes.length.toString();
     document.getElementById('statPesoMerma').textContent = `${parseFloat(ord.PesoMerma).toFixed(4)} kg`;
     document.getElementById('statPerdidaMerma').textContent = `Pérdida: $${parseFloat(ord.PerdidaMermaDinero).toFixed(2)}`;
     document.getElementById('statRendimiento').textContent = `${parseFloat(ord.RendimientoPct).toFixed(2)}%`;
@@ -243,35 +271,98 @@ function renderBalanceAndTable(balance) {
     descuadreEl.style.display = ord.DescuadreFisico ? 'block' : 'none';
 
     const tbody = document.getElementById('cutsTableBody');
+    const cardsContainer = document.getElementById('cutsCardsContainer');
+
     if (cortes.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:2rem; color:var(--text-muted);">No se han registrado pesajes todavía.</td></tr>`;
+        if (tbody) tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding:2rem; color:var(--text-muted);">No se han registrado pesajes todavía.</td></tr>`;
+        if (cardsContainer) cardsContainer.innerHTML = `<div style="text-align:center; padding:2rem 1rem; color:var(--text-muted);"><svg class="icon" viewBox="0 0 24 24" style="width:36px; height:36px; stroke:var(--border-color); margin-bottom:0.5rem; display:block; margin-left:auto; margin-right:auto;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>No se han registrado pesajes de cortes para esta orden todavía.</div>`;
         return;
     }
 
-    tbody.innerHTML = '';
-    cortes.forEach(c => {
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid var(--border-color)';
-        const deleteBtnHtml = isFinalized
-            ? '<span style="color:var(--text-muted); font-size:0.75rem;">-</span>'
-            : `<button type="button" class="btn btn-outline btn-delete-cut" style="padding:2px 6px; font-size:0.75rem; color:var(--danger);" data-id="${c.ID}" title="Eliminar pesaje">&times;</button>`;
+    if (tbody) tbody.innerHTML = '';
+    if (cardsContainer) cardsContainer.innerHTML = '';
 
-        tr.innerHTML = `
-            <td style="padding:0.6rem 0.5rem; font-weight:700;">${c.NroItem}</td>
-            <td style="padding:0.6rem 0.5rem;"><span class="badge" style="background:#55433a; color:var(--primary); font-family:monospace; font-size:0.8rem;">${c.NroLote}</span></td>
-            <td style="padding:0.6rem 0.5rem; font-weight:600; color:var(--text-primary);">${c.NombreCorte}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700;">${parseFloat(c.PesoNeto).toFixed(4)} kg</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--success); font-weight:600;">${parseFloat(c.RendimientoPct).toFixed(2)}%</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--text-muted);">$${parseFloat(c.CostActBase).toFixed(2)}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--danger); font-weight:500;">+$${parseFloat(c.CostoMermaKg).toFixed(2)}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:var(--primary);">$${parseFloat(c.CostoRealUnitario).toFixed(2)}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:var(--success);">$${parseFloat(c.PrecioVentaSugerido).toFixed(2)}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:center; font-size:0.75rem; color:var(--text-muted);">${c.FechaVencimiento}</td>
-            <td style="padding:0.6rem 0.5rem; text-align:center;">
-                ${deleteBtnHtml}
-            </td>
-        `;
-        tbody.appendChild(tr);
+    cortes.forEach(c => {
+        const pesoFmt = parseFloat(c.PesoNeto).toFixed(4);
+        const rendFmt = parseFloat(c.RendimientoPct).toFixed(2);
+        const costRealFmt = parseFloat(c.CostoRealUnitario).toFixed(2);
+        const pSugFmt = parseFloat(c.PrecioVentaSugerido).toFixed(2);
+        const costBaseFmt = parseFloat(c.CostActBase).toFixed(2);
+        const costMermaFmt = parseFloat(c.CostoMermaKg).toFixed(2);
+
+        // Fila para vista de tabla en pantallas grandes (Desktop)
+        if (tbody) {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid var(--border-color)';
+            const deleteBtnHtml = isFinalized
+                ? '<span style="color:var(--text-muted); font-size:0.75rem;">-</span>'
+                : `<button type="button" class="btn btn-outline btn-delete-cut" style="padding:2px 6px; font-size:0.75rem; color:var(--danger);" data-id="${c.ID}" title="Eliminar pesaje">&times;</button>`;
+
+            tr.innerHTML = `
+                <td style="padding:0.6rem 0.5rem; font-weight:700;">${c.NroItem}</td>
+                <td style="padding:0.6rem 0.5rem;"><span class="badge" style="background:#55433a; color:var(--primary); font-family:monospace; font-size:0.8rem;">${c.NroLote}</span></td>
+                <td style="padding:0.6rem 0.5rem; font-weight:600; color:var(--text-primary);">${c.NombreCorte}</td>
+                <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700;">${pesoFmt} kg</td>
+                <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--success); font-weight:600;">${rendFmt}%</td>
+                <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--text-muted);">$${costBaseFmt}</td>
+                <td style="padding:0.6rem 0.5rem; text-align:right; color:var(--danger); font-weight:500;">+$${costMermaFmt}</td>
+                <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:var(--primary);">$${costRealFmt}</td>
+                <td style="padding:0.6rem 0.5rem; text-align:right; font-weight:700; color:var(--success);">$${pSugFmt}</td>
+                <td style="padding:0.6rem 0.5rem; text-align:center; font-size:0.75rem; color:var(--text-muted);">${c.FechaVencimiento}</td>
+                <td style="padding:0.6rem 0.5rem; text-align:center;">
+                    ${deleteBtnHtml}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        // Tarjeta Táctil (Card) para pantallas compactas, tablets, móviles y POS 800x600
+        if (cardsContainer) {
+            const cardEl = document.createElement('div');
+            cardEl.className = 'cut-item-card';
+            const cardDelBtn = isFinalized
+                ? ''
+                : `<button type="button" class="btn btn-outline btn-delete-cut cut-item-del-btn" data-id="${c.ID}">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:14px; height:14px; margin-right:4px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Anular
+                   </button>`;
+
+            cardEl.innerHTML = `
+                <div class="cut-card-header">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span class="cut-card-badge">#${c.NroItem}</span>
+                        <strong class="cut-card-title">${c.NombreCorte}</strong>
+                    </div>
+                    <span class="badge" style="background:#55433a; color:var(--primary); font-family:monospace; font-size:0.75rem;">${c.NroLote}</span>
+                </div>
+                <div class="cut-card-grid">
+                    <div class="cut-card-stat">
+                        <span class="cut-card-stat-lbl">PESO NETO</span>
+                        <span class="cut-card-stat-val val-primary">${pesoFmt} kg</span>
+                    </div>
+                    <div class="cut-card-stat">
+                        <span class="cut-card-stat-lbl">RENDIMIENTO</span>
+                        <span class="cut-card-stat-val val-success">${rendFmt}%</span>
+                    </div>
+                    <div class="cut-card-stat">
+                        <span class="cut-card-stat-lbl">COSTO REAL / KG</span>
+                        <span class="cut-card-stat-val val-highlight">$${costRealFmt}</span>
+                    </div>
+                    <div class="cut-card-stat">
+                        <span class="cut-card-stat-lbl">P. SUGERIDO</span>
+                        <span class="cut-card-stat-val val-accent">$${pSugFmt}</span>
+                    </div>
+                </div>
+                <div class="cut-card-footer">
+                    <span class="cut-card-venc">
+                        <svg class="icon" viewBox="0 0 24 24" style="width:13px; height:13px; margin-right:4px; vertical-align:-1px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        Vence: ${c.FechaVencimiento}
+                    </span>
+                    ${cardDelBtn}
+                </div>
+            `;
+            cardsContainer.appendChild(cardEl);
+        }
     });
 }
 
@@ -419,6 +510,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        const btnTab = e.target.closest('[data-tab]');
+        if (btnTab && btnTab.dataset.tab) {
+            switchStationTab(btnTab.dataset.tab);
+            return;
+        }
+
         const btnKey = e.target.closest('.keypad-btn');
         if (btnKey && btnKey.dataset.key) {
             pressKeypad(btnKey.dataset.key);
@@ -434,6 +531,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnRegCut = document.getElementById('btnRegisterCut');
     if (btnRegCut) btnRegCut.addEventListener('click', registerCutWeight);
+
+    const weighIn = document.getElementById('weighInput');
+    if (weighIn) {
+        weighIn.addEventListener('input', (e) => {
+            let val = e.target.value.replace(/,/g, '.');
+            val = val.replace(/[^0-9.]/g, '');
+            const parts = val.split('.');
+            if (parts.length > 2) {
+                val = parts[0] + '.' + parts.slice(1).join('');
+            }
+            if (parts[1] && parts[1].length > 4) {
+                val = parts[0] + '.' + parts[1].slice(0, 4);
+            }
+            e.target.value = val;
+        });
+    }
 
     const btnConfClose = document.getElementById('btnConfirmCloseOrder');
     if (btnConfClose) btnConfClose.addEventListener('click', executeCloseOrder);

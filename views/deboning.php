@@ -311,8 +311,8 @@ ob_start();
 <!-- VISTA 2: ESTACIÓN TÁCTIL DE PESAJE Y COSTEO -->
 <div id="viewStation" style="display:none;">
     <!-- Barra superior de la estación -->
-    <div class="card" style="margin-bottom:1.25rem; padding:1rem 1.25rem; background:linear-gradient(135deg, #43342d 0%, #4e3d36 100%);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+    <div class="card station-top-bar" style="margin-bottom:1rem; padding:0.85rem 1.25rem; background:linear-gradient(135deg, #43342d 0%, #4e3d36 100%);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
             <div>
                 <span class="badge" id="stationMesaBadge" style="background:var(--primary); color:#fff; font-weight:700; font-size:0.85rem; display:none;"></span>
                 <span style="font-size:1.15rem; font-weight:700; margin-left:0.5rem; color:var(--text-primary);" id="stationOrderTitle">DESP-0000000000000001</span>
@@ -331,73 +331,85 @@ ob_start();
     </div>
 
     <!-- Indicador de Descuadre Físico (oculto por defecto) -->
-    <div id="descuadreAlert" class="alert alert-danger" style="display:none; margin-bottom:1.25rem; font-weight:700; font-size:1rem; border:2px solid #ff3b30;">
+    <div id="descuadreAlert" class="alert alert-danger" style="display:none; margin-bottom:1rem; font-weight:700; font-size:0.95rem; border:2px solid #ff3b30;">
         ⚠️ ALERTA DE DESCUADRE FÍSICO: El peso total de los cortes pesados supera el peso de entrada de la canal. Verifique o anule pesajes erróneos antes de continuar.
     </div>
 
     <!-- Panel de Métricas en Tiempo Real -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:1rem; margin-bottom:1.25rem;">
-        <div class="card" style="padding:1rem; text-align:center;">
-            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Peso Canal Entrada</div>
-            <div style="font-size:1.6rem; font-weight:800; color:var(--text-primary); margin-top:0.25rem;" id="statPesoCanal">0.00 kg</div>
-            <div style="font-size:0.75rem; color:var(--text-secondary);" id="statCostoCanal">$0.00 /kg</div>
+    <div class="deboning-metrics-grid">
+        <div class="card deboning-metric-card">
+            <div class="stat-label">Peso Canal Entrada</div>
+            <div class="stat-val" id="statPesoCanal">0.00 kg</div>
+            <div class="stat-sub" id="statCostoCanal">$0.00 /kg</div>
         </div>
-        <div class="card" style="padding:1rem; text-align:center;">
-            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Cortes Obtenidos</div>
-            <div style="font-size:1.6rem; font-weight:800; color:var(--primary); margin-top:0.25rem;" id="statPesoCortes">0.00 kg</div>
-            <div style="font-size:0.75rem; color:var(--text-secondary);"><span id="statCantCortes">0</span> piezas pesadas</div>
+        <div class="card deboning-metric-card">
+            <div class="stat-label">Cortes Obtenidos</div>
+            <div class="stat-val stat-primary" id="statPesoCortes">0.00 kg</div>
+            <div class="stat-sub"><span id="statCantCortes">0</span> piezas pesadas</div>
         </div>
-        <div class="card" style="padding:1rem; text-align:center;">
-            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Merma Física</div>
-            <div style="font-size:1.6rem; font-weight:800; color:var(--danger); margin-top:0.25rem;" id="statPesoMerma">0.00 kg</div>
-            <div style="font-size:0.75rem; color:var(--danger);" id="statPerdidaMerma">Pérdida: $0.00</div>
+        <div class="card deboning-metric-card">
+            <div class="stat-label">Merma Física</div>
+            <div class="stat-val stat-danger" id="statPesoMerma">0.00 kg</div>
+            <div class="stat-sub stat-danger" id="statPerdidaMerma">Pérdida: $0.00</div>
         </div>
-        <div class="card" style="padding:1rem; text-align:center;">
-            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Rendimiento %</div>
-            <div style="font-size:1.6rem; font-weight:800; color:var(--success); margin-top:0.25rem;" id="statRendimiento">0.00%</div>
-            <div style="font-size:0.75rem; color:var(--text-secondary);">de aprovechamiento</div>
+        <div class="card deboning-metric-card">
+            <div class="stat-label">Rendimiento %</div>
+            <div class="stat-val stat-success" id="statRendimiento">0.00%</div>
+            <div class="stat-sub">de aprovechamiento</div>
         </div>
-        <div class="card" style="padding:1rem; text-align:center;">
-            <div style="font-size:0.8rem; color:var(--text-muted); text-transform:uppercase;">Merma %</div>
-            <div style="font-size:1.6rem; font-weight:800; color:#d8865e; margin-top:0.25rem;" id="statMermaPct">0.00%</div>
-            <div style="font-size:0.75rem; color:var(--text-secondary);">absorbida en cortes</div>
+        <div class="card deboning-metric-card">
+            <div class="stat-label">Merma %</div>
+            <div class="stat-val stat-accent" id="statMermaPct">0.00%</div>
+            <div class="stat-sub">absorbida en cortes</div>
         </div>
     </div>
 
+    <!-- Selector de Pestañas para Pantallas Compactas / POS Táctil 800x600 / Móviles -->
+    <div class="station-tabs-nav" id="stationTabsNav">
+        <button type="button" class="station-tab-btn active" data-tab="weigh" id="tabBtnWeigh">
+            <svg class="icon" viewBox="0 0 24 24" style="width:15px; height:15px; margin-right:4px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            <span>⚖️ Pesar Corte</span>
+        </button>
+        <button type="button" class="station-tab-btn" data-tab="list" id="tabBtnList">
+            <svg class="icon" viewBox="0 0 24 24" style="width:15px; height:15px; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+            <span>📋 Cortes (<span id="stationTabCount">0</span>)</span>
+        </button>
+    </div>
+
     <!-- Área de Trabajo: Captura Táctil de Pesaje y Grilla de Lotes -->
-    <div style="display:grid; grid-template-columns: 1fr 1.3fr; gap:1.25rem; margin-bottom:1.5rem;">
-        <!-- Columna Izquierda: Teclado y Selección Táctil de Cortes -->
-        <div class="card" style="padding:1.25rem;">
-            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:1rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+    <div class="deboning-station-workspace" id="stationWorkspace">
+        <!-- Columna Izquierda / Panel de Pesaje: Teclado y Selección Táctil de Cortes -->
+        <div class="card station-panel station-panel-weigh active" id="stationPanelWeigh" style="padding:1.25rem;">
+            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
                 <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; stroke:var(--primary);"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
                 1. Seleccione el Corte a Pesar
             </h3>
 
             <!-- Botonera Táctil de Cortes Asignados -->
-            <div id="cutsButtonGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:0.6rem; max-height:220px; overflow-y:auto; margin-bottom:1.25rem; padding-right:4px;">
+            <div id="cutsButtonGrid" class="cuts-button-grid">
                 <div style="color:var(--text-muted); font-size:0.85rem; grid-column:1/-1;">Cargando cortes asociados...</div>
             </div>
 
-            <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; padding:0.75rem 1rem; margin-bottom:1rem;">
-                <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Corte Seleccionado:</div>
-                <div id="selectedCutDisplay" style="font-size:1.15rem; font-weight:700; color:var(--primary); margin-top:2px;">
+            <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.85rem; margin-bottom:0.75rem;">
+                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Corte Seleccionado:</div>
+                <div id="selectedCutDisplay" style="font-size:1.1rem; font-weight:700; color:var(--primary); margin-top:2px;">
                     Ninguno seleccionado
                 </div>
             </div>
 
             <!-- Entrada de Peso y Keypad Táctil -->
-            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
+            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.6rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
                 <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; stroke:var(--primary);"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
                 2. Peso Neto (Balanza / Táctil)
             </h3>
 
-            <div style="position:relative; margin-bottom:0.75rem;">
-                <input type="number" step="0.0001" id="weighInput" class="form-control" style="font-size:2rem; font-weight:800; text-align:right; padding:0.75rem 3.5rem 0.75rem 1rem; height:auto; color:var(--text-primary); background:#271e1a;" placeholder="0.0000">
-                <span style="position:absolute; right:1.25rem; top:50%; transform:translateY(-50%); font-size:1.2rem; font-weight:700; color:var(--text-secondary);">kg</span>
+            <div class="weigh-input-wrapper">
+                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="weighInput" class="weigh-input" placeholder="0.0000" autocomplete="off">
+                <span class="weigh-unit-badge">kg</span>
             </div>
 
             <!-- Keypad Numérico Táctil con delegación por data-key -->
-            <div id="keypadContainer" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; margin-bottom:1rem;">
+            <div id="keypadContainer" class="keypad-grid">
                 <button type="button" class="btn btn-secondary keypad-btn" data-key="7">7</button>
                 <button type="button" class="btn btn-secondary keypad-btn" data-key="8">8</button>
                 <button type="button" class="btn btn-secondary keypad-btn" data-key="9">9</button>
@@ -412,15 +424,15 @@ ob_start();
                 <button type="button" class="btn btn-secondary keypad-btn" data-key=".">.</button>
             </div>
 
-            <button type="button" class="btn btn-primary" id="btnRegisterCut" style="width:100%; height:52px; font-size:1.15rem; font-weight:700; justify-content:center;">
+            <button type="button" class="btn btn-primary" id="btnRegisterCut" style="width:100%; height:50px; font-size:1.15rem; font-weight:700; justify-content:center;">
                 <svg class="icon" viewBox="0 0 24 24" style="width:20px; height:20px; margin-right:8px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
                 REGISTRAR CORTE
             </button>
         </div>
 
-        <!-- Columna Derecha: Tabla Dinámica de Cortes Pesados con Lotes y Costeo Real -->
-        <div class="card" style="padding:1.25rem; display:flex; flex-direction:column;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <!-- Columna Derecha / Panel de Historial: Tabla Dinámica de Cortes Pesados con Lotes y Costeo Real -->
+        <div class="card station-panel station-panel-list" id="stationPanelList" style="padding:1.25rem; display:flex; flex-direction:column; min-width:0; max-width:100%;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
                 <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-primary); margin:0;">
                     Cortes Registrados en la Orden
                 </h3>
@@ -429,7 +441,8 @@ ob_start();
                 </span>
             </div>
 
-            <div style="flex:1; overflow-x:auto; max-height:480px;">
+            <!-- Vista 1: Tabla Completa para Pantallas Grandes (Desktop >= 993px) -->
+            <div class="station-table-container">
                 <table class="table" style="width:100%; font-size:0.85rem; border-collapse:collapse;">
                     <thead>
                         <tr style="border-bottom:2px solid var(--border-color); text-align:left; color:var(--text-muted); font-size:0.75rem; text-transform:uppercase;">
@@ -454,6 +467,13 @@ ob_start();
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Vista 2: Tarjetas Táctiles (Cards) para Pantallas Compactas, POS 800x600, Tablets y Móviles -->
+            <div class="station-cards-container" id="cutsCardsContainer">
+                <div style="text-align:center; padding:2rem 1rem; color:var(--text-muted);">
+                    No se han registrado pesajes de cortes para esta orden todavía.
+                </div>
             </div>
         </div>
     </div>
@@ -485,55 +505,7 @@ ob_start();
     </div>
 </div>
 
-<style>
-.keypad-btn {
-    height: 48px;
-    font-size: 1.25rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background: #372a25;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: background-color 0.15s, transform 0.05s;
-}
-.keypad-btn:active {
-    background-color: var(--primary);
-    color: #fff;
-    transform: scale(0.96);
-}
-.cut-btn {
-    padding: 0.6rem 0.5rem;
-    font-size: 0.82rem;
-    font-weight: 600;
-    text-align: center;
-    border-radius: 8px;
-    background: #372a25;
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    word-break: break-word;
-}
-.cut-btn:hover, .cut-btn.selected {
-    background: #4e3d36;
-    border-color: var(--primary);
-    color: var(--primary);
-}
-.cut-btn.selected {
-    border-width: 2px;
-    box-shadow: 0 0 10px rgba(244, 107, 58, 0.35);
-}
-.mesa-select-btn.active {
-    background: var(--primary);
-    color: #fff;
-    border-color: var(--primary-hover);
-}
-</style>
-
+<link rel="stylesheet" href="/css/deboning.css">
 <script src="/js/deboning.js"></script>
 
 <?php
