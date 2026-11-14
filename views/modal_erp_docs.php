@@ -27,7 +27,7 @@ declare(strict_types=1);
             <div class="card" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); padding:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
                     <strong style="font-size:0.95rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
-                        <span style="color:#ff7043;">📤</span> Descargo de Canal
+                        <span style="color:#ff7043;"> </span> Descargo de Canal
                     </strong>
                     <span id="erpModalDescargoStatusBadge" class="badge">EN ESPERA</span>
                 </div>
@@ -61,7 +61,7 @@ declare(strict_types=1);
             <div class="card" style="background:rgba(0,0,0,0.2); border:1px solid var(--border-color); padding:1rem;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
                     <strong style="font-size:0.95rem; color:var(--text-primary); display:flex; align-items:center; gap:0.4rem;">
-                        <span style="color:#66bb6a;">📥</span> Cargo de Cortes
+                        <span style="color:#66bb6a;"> </span> Cargo de Cortes
                     </strong>
                     <span id="erpModalCargoStatusBadge" class="badge">EN ESPERA</span>
                 </div>
@@ -94,7 +94,7 @@ declare(strict_types=1);
 
         <!-- Trazabilidad inmutable en SAITEMOPI.Descrip10 -->
         <div style="background:rgba(0,0,0,0.15); border-radius:6px; padding:0.6rem 0.85rem; margin-bottom:1.25rem; font-size:0.78rem; color:var(--text-muted); line-height:1.4;">
-            💡 <strong>Trazabilidad Saint:</strong> El ERP Saint reemplaza el número de espera original (<code>D-...</code> / <code>C-...</code>) por su propio número consecutivo al procesar la operación. La trazabilidad perpetua queda asegurada en la columna <code>SAITEMOPI.Descrip10</code> con los sufijos <code>-DES</code> y <code>-CAR</code>.
+             <strong>Trazabilidad Saint:</strong> El ERP Saint reemplaza el número de espera original (<code>D-...</code> / <code>C-...</code>) por su propio número consecutivo al procesar la operación. La trazabilidad perpetua queda asegurada en la descripción ampliada del producto con los sufijos  (<code>-DES</code> y <code>-CAR</code>).
         </div>
 
         <!-- Botones de Acción -->
