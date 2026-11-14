@@ -266,8 +266,35 @@ final class DeboningController
 
             echo json_encode([
                 'success' => true,
-                'message' => "Orden de desposte {$nroOrden} cerrada exitosamente. Cortes y mermas cargados en existencias internas."
+                'message' => "Orden de desposte {$nroOrden} cerrada exitosamente. Documentos en espera (Descargo de Canal y Cargo de Cortes) colocados en Saint ERP."
             ]);
+        } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para consultar el estado del cruce de documentos en espera en Saint ERP.
+     */
+    public static function erpStatus(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $nroOrden = trim((string)($_GET['nro_orden'] ?? ''));
+            if ($nroOrden === '') {
+                echo json_encode(['success' => false, 'error' => 'Nro de orden requerido.']);
+                return;
+            }
+            $pdo = Database::getConnection();
+            DeboningErpHoldService::syncDeboningCruceStatus($pdo, $nroOrden);
+            $status = DeboningErpHoldService::getDeboningCruceStatus($pdo, $nroOrden);
+            echo json_encode(['success' => true, 'data' => $status]);
         } catch (Throwable $e) {
             if (Database::isConnectionError($e)) {
                 Database::handleApiError($e);

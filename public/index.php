@@ -17,6 +17,7 @@ require_once __DIR__ . '/../src/Deboning/ReceptionErpHoldService.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionService.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionController.php';
 require_once __DIR__ . '/../src/Deboning/YieldCalculator.php';
+require_once __DIR__ . '/../src/Deboning/DeboningErpHoldService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningQueryService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningController.php';
@@ -187,6 +188,10 @@ try {
 
     case '/api/desposte/balance':
         DeboningController::balance();
+        break;
+
+    case '/api/desposte/erp-status':
+        DeboningController::erpStatus();
         break;
 
     case '/api/desposte/cerrar':

@@ -23,6 +23,19 @@ final class DeboningQueryService
                        CAST(d.PesoMerma AS FLOAT) AS PesoMerma,
                        CAST(d.RendimientoPct AS FLOAT) AS RendimientoPct,
                        CAST(d.MermaPct AS FLOAT) AS MermaPct, d.Estado,
+                       CAST(ISNULL(d.DocDescargoEnviado, 0) AS INT) AS DocDescargoEnviado,
+                       ISNULL(d.DocDescargoNumeroD, '') AS DocDescargoNumeroD,
+                       CAST(ISNULL(d.DocDescargoProcesado, 0) AS INT) AS DocDescargoProcesado,
+                       ISNULL(d.DocDescargoNumeroDOficial, '') AS DocDescargoNumeroDOficial,
+                       ISNULL(d.DocDescargoTipoOpIFinal, '') AS DocDescargoTipoOpIFinal,
+                       d.FechaDocDescargoProcesado,
+                       CAST(ISNULL(d.DocCargoEnviado, 0) AS INT) AS DocCargoEnviado,
+                       ISNULL(d.DocCargoNumeroD, '') AS DocCargoNumeroD,
+                       CAST(ISNULL(d.DocCargoProcesado, 0) AS INT) AS DocCargoProcesado,
+                       ISNULL(d.DocCargoNumeroDOficial, '') AS DocCargoNumeroDOficial,
+                       ISNULL(d.DocCargoTipoOpIFinal, '') AS DocCargoTipoOpIFinal,
+                       d.FechaDocCargoProcesado,
+                       ISNULL(d.EstadoCruceERP, 'PENDIENTE_CIERRE') AS EstadoCruceERP,
                        (SELECT COUNT(1) FROM ST_Despostadora_DespostesDetalle det WHERE det.NroOrdenDesposte = d.NroOrdenDesposte) AS TotalCortesPesados
                 FROM ST_Despostadora_Despostes d
                 INNER JOIN SAPROD p ON p.CodProd = d.CodProdCanal
@@ -50,6 +63,13 @@ final class DeboningQueryService
         ?string $estado = null
     ): array {
         $pdo = Database::getConnection();
+
+        // Sincronizar automáticamente en tiempo real el cruce de documentos de desposte con Saint ERP
+        try {
+            DeboningErpHoldService::syncDeboningCruceStatus($pdo);
+        } catch (\Throwable $e) {
+            error_log('[SYNC DEBONING ERP ERROR] ' . $e->getMessage());
+        }
 
         $where = [];
         $params = [];
@@ -104,6 +124,19 @@ final class DeboningQueryService
                        CAST(d.PesoMerma AS FLOAT) AS PesoMerma,
                        CAST(d.RendimientoPct AS FLOAT) AS RendimientoPct,
                        CAST(d.MermaPct AS FLOAT) AS MermaPct, d.Estado,
+                       CAST(ISNULL(d.DocDescargoEnviado, 0) AS INT) AS DocDescargoEnviado,
+                       ISNULL(d.DocDescargoNumeroD, '') AS DocDescargoNumeroD,
+                       CAST(ISNULL(d.DocDescargoProcesado, 0) AS INT) AS DocDescargoProcesado,
+                       ISNULL(d.DocDescargoNumeroDOficial, '') AS DocDescargoNumeroDOficial,
+                       ISNULL(d.DocDescargoTipoOpIFinal, '') AS DocDescargoTipoOpIFinal,
+                       d.FechaDocDescargoProcesado,
+                       CAST(ISNULL(d.DocCargoEnviado, 0) AS INT) AS DocCargoEnviado,
+                       ISNULL(d.DocCargoNumeroD, '') AS DocCargoNumeroD,
+                       CAST(ISNULL(d.DocCargoProcesado, 0) AS INT) AS DocCargoProcesado,
+                       ISNULL(d.DocCargoNumeroDOficial, '') AS DocCargoNumeroDOficial,
+                       ISNULL(d.DocCargoTipoOpIFinal, '') AS DocCargoTipoOpIFinal,
+                       d.FechaDocCargoProcesado,
+                       ISNULL(d.EstadoCruceERP, 'PENDIENTE_CIERRE') AS EstadoCruceERP,
                        (SELECT COUNT(1) FROM ST_Despostadora_DespostesDetalle det WHERE det.NroOrdenDesposte = d.NroOrdenDesposte) AS TotalCortesPesados
                 FROM ST_Despostadora_Despostes d
                 INNER JOIN SAPROD p ON p.CodProd = d.CodProdCanal

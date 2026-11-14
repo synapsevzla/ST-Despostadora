@@ -477,10 +477,15 @@ final class DeboningService
             $stmtUpdEsp->bindValue(':nro', $nroOrden, PDO::PARAM_STR);
             $stmtUpdEsp->execute();
 
+            // Generar los dos Documentos en Espera en el ERP Saint (Descargo de Canal y Cargo de Cortes)
+            $erpDocs = DeboningErpHoldService::insertDeboningHoldDocuments($pdo, $nroOrden, $codusua, $calc);
+
             AuditService::log('DESPOSTE', $nroOrden, 'CERRAR_ORDEN', $codusua, [
                 'PesoCanal' => $ord['PesoCanalEntrada'],
                 'PesoCortes' => $ord['PesoTotalCortes'],
-                'PesoMerma' => $ord['PesoMerma']
+                'PesoMerma' => $ord['PesoMerma'],
+                'DocDescargoNumeroD' => $erpDocs['descargo'],
+                'DocCargoNumeroD' => $erpDocs['cargo']
             ], $pdo);
 
             $pdo->commit();

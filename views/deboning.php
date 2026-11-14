@@ -181,6 +181,7 @@ ob_start();
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Rend. %</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Merma %</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: center;">Estado</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: center;">Cruce ERP</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: center;">Acción</th>
                         </tr>
                     </thead>
@@ -231,6 +232,27 @@ ob_start();
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                                    <?php if ($o['Estado'] !== 'FINALIZADO'): ?>
+                                        <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;">EN MESA</span>
+                                    <?php else: ?>
+                                        <?php 
+                                            $cruce = $o['EstadoCruceERP'] ?? 'PENDIENTE_CIERRE';
+                                            if ($cruce === 'TOTALMENTE_PROCESADO'): ?>
+                                                <span class="badge badge-success" style="font-size: 0.75rem; font-family: monospace;" title="Descargo: <?= Security::escape($o['DocDescargoNumeroDOficial'] ?? '') ?>, Cargo: <?= Security::escape($o['DocCargoNumeroDOficial'] ?? '') ?>">PROCESADO ERP (OK)</span>
+                                            <?php elseif ($cruce === 'DESCARGO_OK_CARGO_PEND'): ?>
+                                                <span class="badge badge-warning" style="font-size: 0.75rem; font-family: monospace;" title="Descargo procesado (P), Cargo en espera (R)">DESCARGO OK (CARGO PEND)</span>
+                                            <?php elseif ($cruce === 'CARGO_OK_DESCARGO_PEND'): ?>
+                                                <span class="badge badge-warning" style="font-size: 0.75rem; font-family: monospace;" title="Cargo procesado (O), Descargo en espera (R)">CARGO OK (DESCARGO PEND)</span>
+                                            <?php elseif (str_starts_with((string)$cruce, 'ERROR_')): ?>
+                                                <span class="badge" style="background: rgba(238, 103, 55, 0.2); color: #ff5252; border: 1px solid rgba(238, 103, 55, 0.4); font-size: 0.75rem; font-family: monospace;" title="Operación procesada con letra errada en el ERP">ERROR OPERACIÓN ERP</span>
+                                            <?php elseif (!empty($o['DocDescargoEnviado']) || !empty($o['DocCargoEnviado'])): ?>
+                                                <span class="badge" style="background: rgba(30, 144, 255, 0.15); color: #2196f3; border: 1px solid rgba(30, 144, 255, 0.3); font-size: 0.75rem; font-family: monospace;" title="Descargo y Cargo en espera registrados en Saint">DOCS EN ESPERA</span>
+                                            <?php else: ?>
+                                                <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;">PENDIENTE</span>
+                                            <?php endif; ?>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
                                     <?php if ($o['Estado'] === 'EN_PROCESO'): ?>
                                         <button type="button" class="btn btn-primary btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
                                             Operar Mesa
@@ -269,6 +291,17 @@ ob_start();
                                     <span class="badge" style="background: rgba(193, 218, 198, 0.15); color: var(--success); font-size: 0.7rem;">FINALIZADO</span>
                                 <?php else: ?>
                                     <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;"><?= Security::escape($o['Estado']) ?></span>
+                                <?php endif; ?>
+
+                                <?php if ($o['Estado'] === 'FINALIZADO'): ?>
+                                    <?php $cruce = $o['EstadoCruceERP'] ?? 'PENDIENTE_CIERRE'; ?>
+                                    <?php if ($cruce === 'TOTALMENTE_PROCESADO'): ?>
+                                        <span class="badge badge-success" style="font-size: 0.7rem; font-family: monospace;">ERP OK</span>
+                                    <?php elseif (str_starts_with((string)$cruce, 'ERROR_')): ?>
+                                        <span class="badge badge-danger" style="background: rgba(238, 103, 55, 0.2); color: #ff5252; font-size: 0.7rem;">ERP ERROR</span>
+                                    <?php elseif (!empty($o['DocDescargoEnviado']) || !empty($o['DocCargoEnviado'])): ?>
+                                        <span class="badge" style="background: rgba(30, 144, 255, 0.15); color: #2196f3; font-size: 0.7rem;">ERP ESPERA</span>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -349,20 +382,15 @@ ob_start();
                         <?php
                         $startPage = max(1, $curPage - 2);
                         $endPage = min($totPages, $curPage + 2);
-
                         if ($startPage > 1) {
                             echo '<a href="' . $makeDespUrl(1) . '" class="page-btn">1</a>';
                             if ($startPage > 2) echo '<span class="page-btn disabled">...</span>';
                         }
-
                         for ($i = $startPage; $i <= $endPage; $i++) {
-                            if ($i === $curPage) {
-                                echo '<span class="page-btn active">' . $i . '</span>';
-                            } else {
-                                echo '<a href="' . $makeDespUrl($i) . '" class="page-btn">' . $i . '</a>';
-                            }
+                            echo ($i === $curPage) 
+                                ? '<span class="page-btn active">' . $i . '</span>'
+                                : '<a href="' . $makeDespUrl($i) . '" class="page-btn">' . $i . '</a>';
                         }
-
                         if ($endPage < $totPages) {
                             if ($endPage < $totPages - 1) echo '<span class="page-btn disabled">...</span>';
                             echo '<a href="' . $makeDespUrl($totPages) . '" class="page-btn">' . $totPages . '</a>';
@@ -534,25 +562,13 @@ ob_start();
 <!-- MODAL: CONFIRMACIÓN DE CIERRE DEFINITIVO DE DESPOSTE -->
 <div id="modalCloseOrder" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(20,15,12,0.8); z-index:100; align-items:center; justify-content:center; padding:1.5rem; backdrop-filter:blur(3px);">
     <div class="card" style="width:100%; max-width:540px; box-shadow:0 12px 32px rgba(0,0,0,0.6);">
-        <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin-bottom:0.75rem;">
-            Confirmar Cierre de Orden de Desposte
-        </h2>
-        <p style="color:var(--text-secondary); font-size:0.9rem; line-height:1.5; margin-bottom:1.25rem;">
-            Al confirmar, se ejecutarán de forma atómica los siguientes movimientos internos:
+        <h2 style="font-size:1.25rem; font-weight:700; color:var(--text-primary); margin-bottom:0.75rem;">Confirmar Cierre de Orden de Desposte</h2>
+        <p style="color:var(--text-secondary); font-size:0.9rem; line-height:1.5; margin-bottom:1rem;">
+            Al confirmar, se registrarán internamente los lotes y costos reales, y se emitirán en espera los <strong>documentos de descargo (canal) y cargo (cortes)</strong> hacia el ERP Saint.
         </p>
-        <ul style="color:var(--text-secondary); font-size:0.85rem; margin-bottom:1.25rem; padding-left:1.25rem; line-height:1.6;">
-            <li>Fijación definitiva del costo real unitario con absorción de merma para cada lote de corte.</li>
-            <li>Carga del stock de los cortes pesados en <code>ST_Despostadora_Existencias</code> con sus lotes únicos y vencimientos.</li>
-            <li>Carga del stock de merma en <code>ST_Despostadora_Existencias</code> si aplica.</li>
-            <li>Descarga definitiva de la carne en canal de <code>ST_Despostadora_Existencias</code>.</li>
-            <li><strong>Cero impacto a tablas ERP directas</strong> (SAPROD.Existen permanece 100% intacto).</li>
-        </ul>
-
         <div style="display:flex; justify-content:flex-end; gap:0.75rem;">
             <button type="button" class="btn btn-outline" data-action="close-modal-close-order">Cancelar</button>
-            <button type="button" class="btn btn-danger" id="btnConfirmCloseOrder">
-                Confirmar y Cerrar Desposte
-            </button>
+            <button type="button" class="btn btn-danger" id="btnConfirmCloseOrder">Confirmar y Cerrar Desposte</button>
         </div>
     </div>
 </div>
