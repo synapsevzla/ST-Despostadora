@@ -47,7 +47,8 @@ try {
 }
 
 // Router minimalista nativo
-$requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$rawUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+$requestUri = ($rawUri !== '/' && str_ends_with($rawUri, '/')) ? rtrim($rawUri, '/') : $rawUri;
 $requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
 // Manejo de rutas

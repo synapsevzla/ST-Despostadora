@@ -5,10 +5,13 @@
 document.addEventListener('DOMContentLoaded', () => {
     let metodoActual = 'SOLO_PESO';
     const piezasIndividuales = [];
+    let isSubmitting = false;
 
     // Elementos del DOM
     const form = document.getElementById('formNuevaRecepcionPagina');
     const selectEspecie = document.getElementById('rec_codprod');
+    const inputUbic = document.getElementById('rec_codubic');
+    const inputObs = document.getElementById('rec_observaciones');
     const panelEstandar = document.getElementById('panel_pesos_estandar');
     const panelIndividual = document.getElementById('panel_pesos_individual');
     const grpCantidad = document.getElementById('grp_cantidad_especies');
@@ -47,6 +50,67 @@ document.addEventListener('DOMContentLoaded', () => {
         if (alertBox) alertBox.style.display = 'none';
     }
 
+    // Persistencia y Respaldo Local (Auto-Save para evitar pérdidas por F5 o recargas involuntarias)
+    function guardarBorrador() {
+        if (isSubmitting) return;
+        const draft = {
+            codprod: selectEspecie?.value || '',
+            codubic: inputUbic?.value || '',
+            observaciones: inputObs?.value || '',
+            metodo: metodoActual,
+            cantidad: inputCantidad?.value || '',
+            peso_bruto: inputPesoBruto?.value || '',
+            tara: inputTara?.value || '',
+            piezas: piezasIndividuales
+        };
+        const hasContent = draft.piezas.length > 0 || draft.codprod !== '' ||
+            parseFloat(draft.peso_bruto || '0') > 0 || draft.observaciones.trim() !== '';
+        if (hasContent) {
+            sessionStorage.setItem('st_draft_recepcion_nueva', JSON.stringify(draft));
+        } else {
+            sessionStorage.removeItem('st_draft_recepcion_nueva');
+        }
+    }
+
+    function restaurarBorrador() {
+        const raw = sessionStorage.getItem('st_draft_recepcion_nueva');
+        if (!raw) return;
+        try {
+            const draft = JSON.parse(raw);
+            if (!draft) return;
+
+            if (draft.codprod && selectEspecie) selectEspecie.value = draft.codprod;
+            if (draft.codubic && inputUbic) inputUbic.value = draft.codubic;
+            if (draft.observaciones && inputObs) inputObs.value = draft.observaciones;
+            if (draft.cantidad && inputCantidad) inputCantidad.value = draft.cantidad;
+            if (draft.peso_bruto && inputPesoBruto) inputPesoBruto.value = draft.peso_bruto;
+            if (draft.tara && inputTara) inputTara.value = draft.tara;
+
+            if (Array.isArray(draft.piezas) && draft.piezas.length > 0) {
+                piezasIndividuales.length = 0;
+                piezasIndividuales.push(...draft.piezas);
+                renderizarListaPiezas();
+                actualizarResumenIndividual();
+            }
+
+            if (draft.metodo) {
+                const card = document.querySelector(`.metodo-card-btn[data-method="${draft.metodo}"]`);
+                if (card) {
+                    card.click();
+                } else {
+                    actualizarVistasMetodo();
+                }
+            } else {
+                recalcularNetoEstandar();
+            }
+
+            const notice = document.getElementById('recepcionDraftNotice');
+            if (notice) notice.style.display = 'flex';
+        } catch (e) {
+            console.error('Error restaurando borrador de recepción:', e);
+        }
+    }
+
     // 1. Selector de Método de Entrada
     document.querySelectorAll('.metodo-card-btn').forEach(card => {
         card.addEventListener('click', () => {
@@ -81,6 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
             actualizarResumenIndividual();
             if (inputPesoInd) inputPesoInd.focus();
         }
+        guardarBorrador();
     }
 
     // 2. Cálculos para Método 1 y 2
@@ -103,15 +168,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (lblPesoPromedio) lblPesoPromedio.textContent = promPeso.toFixed(4) + ' kg';
             if (lblCostoPromedio) lblCostoPromedio.textContent = '$' + promCosto.toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 4 });
         }
+        guardarBorrador();
     }
 
-    [inputPesoBruto, inputTara, inputCantidad].forEach(inp => {
-        inp?.addEventListener('input', recalcularNetoEstandar);
+    [inputPesoBruto, inputTara, inputCantidad, inputObs, inputUbic].forEach(inp => {
+        inp?.addEventListener('input', () => {
+            recalcularNetoEstandar();
+            guardarBorrador();
+        });
+        inp?.addEventListener('change', guardarBorrador);
     });
 
     selectEspecie?.addEventListener('change', () => {
         recalcularNetoEstandar();
         actualizarResumenIndividual();
+        guardarBorrador();
     });
 
     // 3. Lógica para Método 3 (Pesaje Individual)
@@ -128,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         hideAlert();
         renderizarListaPiezas();
         actualizarResumenIndividual();
+        guardarBorrador();
         inputPesoInd.focus();
     }
 
@@ -202,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 piezasIndividuales.splice(idx, 1);
                 renderizarListaPiezas();
                 actualizarResumenIndividual();
+                guardarBorrador();
             });
 
             item.appendChild(info);
@@ -235,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
             piezasIndividuales.length = 0;
             renderizarListaPiezas();
             actualizarResumenIndividual();
+            guardarBorrador();
         }
     });
 
@@ -307,6 +381,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await resp.json();
             if (data.success) {
+                isSubmitting = true;
+                sessionStorage.removeItem('st_draft_recepcion_nueva');
                 showAlert(data.message || 'Recepción registrada con éxito. Redirigiendo...', 'success');
                 setTimeout(() => {
                     window.location.href = '/recepcion';
@@ -326,4 +402,50 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Descartar borrador manualmente
+    document.getElementById('btnDescartarBorrador')?.addEventListener('click', () => {
+        if (confirm('¿Está seguro de descartar el borrador y limpiar todos los datos?')) {
+            sessionStorage.removeItem('st_draft_recepcion_nueva');
+            piezasIndividuales.length = 0;
+            renderizarListaPiezas();
+            actualizarResumenIndividual();
+            if (form) form.reset();
+            const card1 = document.getElementById('card_metodo_1');
+            if (card1) card1.click();
+            const notice = document.getElementById('recepcionDraftNotice');
+            if (notice) notice.style.display = 'none';
+            recalcularNetoEstandar();
+            hideAlert();
+        }
+    });
+
+    // Enlaces de regreso con confirmación si hay pesajes cargados
+    document.querySelectorAll('a[href="/recepcion"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            if (piezasIndividuales.length > 0) {
+                if (!confirm('Tiene reses pesadas sin guardar en esta recepción. ¿Desea salir y descartar los datos?')) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+            isSubmitting = true;
+            sessionStorage.removeItem('st_draft_recepcion_nueva');
+        });
+    });
+
+    // Protección nativa contra recarga accidental (F5, Ctrl+R o navegación inesperada)
+    window.addEventListener('beforeunload', (e) => {
+        if (isSubmitting) return;
+        const hasData = (piezasIndividuales.length > 0) ||
+            (inputPesoBruto && parseFloat(inputPesoBruto.value || '0') > 0) ||
+            (inputObs && inputObs.value.trim() !== '');
+        if (hasData) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Restaurar borrador previo si existe en la sesión
+    restaurarBorrador();
 });

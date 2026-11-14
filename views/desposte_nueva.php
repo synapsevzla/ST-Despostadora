@@ -28,7 +28,11 @@ ob_start();
     </div>
 </div>
 
-<!-- Alerta de Notificación -->
+<!-- Alerta de Notificación y Alerta de Borrador -->
+<div id="desposteDraftNotice" class="alert alert-info" style="display:none; margin-bottom:1.25rem; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+    <span><strong>Borrador en curso recuperado:</strong> Se restauraron los datos seleccionados previamente.</span>
+    <button type="button" class="btn btn-outline btn-sm" id="btnDescartarBorrador" style="padding:0.25rem 0.6rem; font-size:0.8rem; background:rgba(0,0,0,0.15);">Descartar Borrador</button>
+</div>
 <div id="desposteAlert" class="alert" style="display:none; margin-bottom:1.25rem;"></div>
 
 <form id="formNuevaOrdenPagina">
@@ -81,11 +85,14 @@ ob_start();
                     <label class="form-label" for="selectCanalEspecie">Especie / Tipo de Canal *</label>
                     <select name="codprod_canal" id="selectCanalEspecie" class="form-input" required>
                         <option value="">-- Seleccione una especie configurada --</option>
-                        <?php foreach ($species as $sp): 
+                        <?php 
+                        $selectedEspecie = $selectedEspecie ?? '';
+                        foreach ($species as $sp): 
                             $cCanal = (string)($sp['CodProdCanal'] ?? $sp['CodProd'] ?? '');
                             $nCanal = (string)($sp['NombreCanal'] ?? $sp['NombreEspecie'] ?? $cCanal);
+                            $isSelected = ($selectedEspecie !== '' && ($selectedEspecie === $cCanal || $selectedEspecie === ($sp['CodProd'] ?? '')));
                         ?>
-                            <option value="<?= Security::escape($cCanal) ?>">
+                            <option value="<?= Security::escape($cCanal) ?>" <?= $isSelected ? 'selected' : '' ?>>
                                 <?= Security::escape($nCanal) ?> (<?= Security::escape($cCanal) ?>)
                             </option>
                         <?php endforeach; ?>

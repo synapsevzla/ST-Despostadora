@@ -364,6 +364,7 @@ final class DeboningService
                 'DescuadreFisico' => $computed['DescuadreFisico']
             ]),
             'cortes' => $computed['Cortes'],
+            'especie_cortes' => ConfigService::getSpeciesCuts((string)$ord['CodProdCanal']),
             'totales' => [
                 'PesoCanal' => $pesoCanal,
                 'PesoCortes' => $computed['PesoTotalCortes'],

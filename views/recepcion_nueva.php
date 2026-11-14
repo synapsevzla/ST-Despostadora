@@ -26,7 +26,11 @@ ob_start();
     </div>
 </div>
 
-<!-- Alerta de Notificación -->
+<!-- Alerta de Notificación y Alerta de Borrador -->
+<div id="recepcionDraftNotice" class="alert alert-info" style="display:none; margin-bottom:1.25rem; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.5rem;">
+    <span><strong>Borrador en curso recuperado:</strong> Se restauraron los datos y pesajes capturados previamente.</span>
+    <button type="button" class="btn btn-outline btn-sm" id="btnDescartarBorrador" style="padding:0.25rem 0.6rem; font-size:0.8rem; background:rgba(0,0,0,0.15);">Descartar Borrador</button>
+</div>
 <div id="recepcionAlert" class="alert" style="display:none; margin-bottom:1.25rem;"></div>
 
 <form id="formNuevaRecepcionPagina">
@@ -45,11 +49,16 @@ ob_start();
                 <label class="form-label" for="rec_codprod">Especie / Canal Habilitada *</label>
                 <select name="codprod" id="rec_codprod" class="form-input" required>
                     <option value="">-- Seleccione Especie Cárnica --</option>
-                    <?php foreach ($species as $sp): ?>
+                    <?php 
+                    $selectedEspecie = $selectedEspecie ?? '';
+                    foreach ($species as $sp): 
+                        $isSelected = ($selectedEspecie === $sp['CodProd']);
+                    ?>
                         <option value="<?= Security::escape($sp['CodProd']) ?>" 
                                 data-costo="<?= (float)$sp['CostActCanal'] ?>" 
                                 data-unidad="<?= Security::escape($sp['Unidad']) ?>"
-                                data-descrip="<?= Security::escape($sp['NombreEspecie']) ?>">
+                                data-descrip="<?= Security::escape($sp['NombreEspecie']) ?>"
+                                <?= $isSelected ? 'selected' : '' ?>>
                             [<?= Security::escape($sp['CodProd']) ?>] <?= Security::escape($sp['NombreEspecie']) ?> - Costo ERP: $<?= number_format((float)$sp['CostActCanal'], 2) ?>
                         </option>
                     <?php endforeach; ?>
@@ -111,7 +120,7 @@ ob_start();
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
                             <div style="font-weight:700; font-size:1rem; color:var(--text-primary);">Método 3: Pieza por Pieza (Pesaje Separado)</div>
-                            <div style="font-size:0.8rem; color:var(--text-secondary);">Captura individual de cada res/novillo recibido (ej. 300 o 350 canales).</div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">Captura individual de cada res / novillo / cerdo o cualquier otra especie</div>
                         </div>
                         <span class="badge badge-warning">Individual</span>
                     </div>
@@ -207,7 +216,7 @@ ob_start();
                     </div>
                     <button type="button" class="btn btn-primary" id="btnAgregarPieza" style="width:auto; min-width:130px; font-size:1.05rem; height:60px; display:inline-flex; align-items:center; justify-content:center; gap:0.35rem;" data-action="agregar-pieza">
                         <svg class="icon" viewBox="0 0 24 24" style="width:20px; height:20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        + Agregar
+                        Agregar
                     </button>
                 </div>
 

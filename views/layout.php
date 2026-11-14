@@ -14,7 +14,7 @@ use Config\Assets;
     <link rel="stylesheet" href="/css/app.css">
     <link rel="stylesheet" href="/css/responsive-cards.css">
 </head>
-<body>
+<body class="<?= Security::escape($bodyClass ?? '') ?>">
     <div class="app-shell">
         <!-- Overlay para mobile y fondo difuminado -->
         <div id="sidebarOverlay" class="sidebar-overlay"></div>

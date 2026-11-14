@@ -1,11 +1,13 @@
 <?php
 declare(strict_types=1);
-
 use Config\Security;
 
+$initialOrder = !empty($initialOrder) ? (string)$initialOrder : (!empty($_GET['order']) ? trim((string)$_GET['order']) : '');
+$isStationInitial = ($initialOrder !== '');
+$bodyClass = $isStationInitial ? 'station-active' : '';
 ob_start();
 ?>
-
+<input type="hidden" id="initialOrderNumber" value="<?= Security::escape($initialOrder) ?>">
 <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
     <div>
         <h1 class="page-title" style="font-size:1.6rem; font-weight:700; color:var(--text-primary); margin:0;">
@@ -26,12 +28,10 @@ ob_start();
         </a>
     </div>
 </div>
-
 <!-- Alerta de Notificación Rápida -->
 <div id="deboningAlert" class="alert" style="display:none; margin-bottom:1.25rem;"></div>
-
 <!-- VISTA 1: TABLERO MULTI-LÍNEA / MULTI-MESA -->
-<div id="viewBoard" style="display:block;">
+<div id="viewBoard" style="display:<?= $isStationInitial ? 'none' : 'block' ?>;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
         <h2 style="font-size:1.15rem; font-weight:600; color:var(--text-primary); margin:0;">
             Mesas y Líneas Activas en Producción
@@ -380,9 +380,8 @@ ob_start();
         <?php endif; ?>
     </div>
 </div>
-
 <!-- VISTA 2: ESTACIÓN TÁCTIL DE PESAJE Y COSTEO -->
-<div id="viewStation" style="display:none;">
+<div id="viewStation" style="display:<?= $isStationInitial ? 'block' : 'none' ?>;">
     <!-- Barra superior de la estación -->
     <div class="card station-top-bar" style="margin-bottom:1rem; padding:0.85rem 1.25rem; background:linear-gradient(135deg, #43342d 0%, #4e3d36 100%);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.75rem;">
@@ -437,81 +436,21 @@ ob_start();
         </div>
     </div>
 
-    <!-- Selector de Pestañas para Pantallas Compactas / POS Táctil 800x600 / Móviles -->
-    <div class="station-tabs-nav" id="stationTabsNav">
-        <button type="button" class="station-tab-btn active" data-tab="weigh" id="tabBtnWeigh">
-            <svg class="icon" viewBox="0 0 24 24" style="width:15px; height:15px; margin-right:4px;"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-            <span>⚖️ Pesar Corte</span>
-        </button>
-        <button type="button" class="station-tab-btn" data-tab="list" id="tabBtnList">
-            <svg class="icon" viewBox="0 0 24 24" style="width:15px; height:15px; margin-right:4px;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-            <span>📋 Cortes (<span id="stationTabCount">0</span>)</span>
-        </button>
-    </div>
-
-    <!-- Área de Trabajo: Captura Táctil de Pesaje y Grilla de Lotes -->
+    <!-- Área de Trabajo: Lista Completa de Cortes y Costeo Real -->
     <div class="deboning-station-workspace" id="stationWorkspace">
-        <!-- Columna Izquierda / Panel de Pesaje: Teclado y Selección Táctil de Cortes -->
-        <div class="card station-panel station-panel-weigh active" id="stationPanelWeigh" style="padding:1.25rem;">
-            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.75rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
-                <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; stroke:var(--primary);"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
-                1. Seleccione el Corte a Pesar
-            </h3>
-
-            <!-- Botonera Táctil de Cortes Asignados -->
-            <div id="cutsButtonGrid" class="cuts-button-grid">
-                <div style="color:var(--text-muted); font-size:0.85rem; grid-column:1/-1;">Cargando cortes asociados...</div>
-            </div>
-
-            <div style="background:rgba(0,0,0,0.25); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.85rem; margin-bottom:0.75rem;">
-                <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Corte Seleccionado:</div>
-                <div id="selectedCutDisplay" style="font-size:1.1rem; font-weight:700; color:var(--primary); margin-top:2px;">
-                    Ninguno seleccionado
-                </div>
-            </div>
-
-            <!-- Entrada de Peso y Keypad Táctil -->
-            <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.6rem; color:var(--text-primary); display:flex; align-items:center; gap:0.5rem;">
-                <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; stroke:var(--primary);"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-                2. Peso Neto (Balanza / Táctil)
-            </h3>
-
-            <div class="weigh-input-wrapper">
-                <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="weighInput" class="weigh-input" placeholder="0.0000" autocomplete="off">
-                <span class="weigh-unit-badge">kg</span>
-            </div>
-
-            <!-- Keypad Numérico Táctil con delegación por data-key -->
-            <div id="keypadContainer" class="keypad-grid">
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="7">7</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="8">8</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="9">9</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="4">4</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="5">5</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="6">6</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="1">1</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="2">2</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="3">3</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="C" style="background:#5c352a; color:#ff9d80;">C</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key="0">0</button>
-                <button type="button" class="btn btn-secondary keypad-btn" data-key=".">.</button>
-            </div>
-
-            <button type="button" class="btn btn-primary" id="btnRegisterCut" style="width:100%; height:50px; font-size:1.15rem; font-weight:700; justify-content:center;">
-                <svg class="icon" viewBox="0 0 24 24" style="width:20px; height:20px; margin-right:8px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                REGISTRAR CORTE
-            </button>
-        </div>
-
-        <!-- Columna Derecha / Panel de Historial: Tabla Dinámica de Cortes Pesados con Lotes y Costeo Real -->
-        <div class="card station-panel station-panel-list" id="stationPanelList" style="padding:1.25rem; display:flex; flex-direction:column; min-width:0; max-width:100%;">
+        <div class="card station-panel-list" id="stationPanelList" style="padding:1.25rem; display:flex; flex-direction:column; min-width:0; width:100%;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; flex-wrap:wrap; gap:0.5rem;">
                 <h3 style="font-size:1.05rem; font-weight:700; color:var(--text-primary); margin:0;">
                     Cortes Registrados en la Orden
                 </h3>
-                <span class="badge" style="background:#55433a; color:var(--text-secondary); font-size:0.75rem;">
-                    Absorción de Merma Ponderada
-                </span>
+                <div style="display:flex; gap:0.4rem; align-items:center;">
+                    <span class="badge" style="background:#55433a; color:var(--primary); font-size:0.75rem;">
+                        Alfabético A-Z
+                    </span>
+                    <span class="badge" style="background:#55433a; color:var(--text-secondary); font-size:0.75rem;">
+                        Absorción de Merma Ponderada
+                    </span>
+                </div>
             </div>
 
             <!-- Vista 1: Tabla Completa para Pantallas Grandes (Desktop >= 993px) -->
@@ -535,7 +474,7 @@ ob_start();
                     <tbody id="cutsTableBody">
                         <tr>
                             <td colspan="11" style="text-align:center; padding:2rem; color:var(--text-muted);">
-                                No se han registrado pesajes de cortes para esta orden todavía.
+                                Cargando cortes asociados a la orden...
                             </td>
                         </tr>
                     </tbody>
@@ -545,9 +484,49 @@ ob_start();
             <!-- Vista 2: Tarjetas Táctiles (Cards) para Pantallas Compactas, POS 800x600, Tablets y Móviles -->
             <div class="station-cards-container" id="cutsCardsContainer">
                 <div style="text-align:center; padding:2rem 1rem; color:var(--text-muted);">
-                    No se han registrado pesajes de cortes para esta orden todavía.
+                    Cargando cortes asociados a la orden...
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL: CALCULADORA Y PESAJE TÁCTIL DE CORTE -->
+<div id="modalWeighCalculator" class="modal-backdrop" style="display:none; position:fixed; inset:0; background:rgba(20,15,12,0.85); z-index:100; align-items:center; justify-content:center; padding:1rem; backdrop-filter:blur(4px);">
+    <div class="card" style="width:100%; max-width:440px; box-shadow:0 16px 40px rgba(0,0,0,0.7); border:1px solid var(--border-color); padding:1.25rem;">
+        <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-color); border-radius:8px; padding:0.6rem 0.85rem; margin-bottom:0.75rem; position:relative;">
+            <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">Corte Seleccionado:</div>
+            <div id="selectedCutDisplay" style="font-size:1.1rem; font-weight:700; color:var(--primary); margin-top:2px; padding-right:1.5rem;">
+                Ninguno seleccionado
+            </div>
+            <button type="button" class="btn btn-outline" data-action="close-modal-weigh" style="position:absolute; top:8px; right:8px; padding:0 6px; font-size:1.2rem; line-height:1.2; border:none; color:var(--text-muted);" title="Cerrar">&times;</button>
+        </div>
+
+        <div style="font-size:0.85rem; font-weight:700; color:var(--text-secondary); margin-bottom:0.4rem; display:flex; align-items:center; gap:0.4rem;">
+            <svg class="icon" viewBox="0 0 24 24" style="width:16px; height:16px; stroke:var(--primary);"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+            Peso Neto (Balanza / Táctil)
+        </div>
+
+        <div class="weigh-input-wrapper" style="margin-bottom:0.75rem;">
+            <input type="text" inputmode="decimal" pattern="[0-9]*[.,]?[0-9]*" id="weighInput" class="weigh-input" placeholder="0.0000" autocomplete="off" style="font-size:1.6rem; text-align:right; font-weight:800; font-family:monospace;">
+            <span class="weigh-unit-badge">kg</span>
+        </div>
+
+        <div id="keypadContainer" class="keypad-grid" style="margin-bottom:0.85rem;">
+            <button type="button" class="btn btn-secondary keypad-btn" data-key="7">7</button><button type="button" class="btn btn-secondary keypad-btn" data-key="8">8</button><button type="button" class="btn btn-secondary keypad-btn" data-key="9">9</button>
+            <button type="button" class="btn btn-secondary keypad-btn" data-key="4">4</button><button type="button" class="btn btn-secondary keypad-btn" data-key="5">5</button><button type="button" class="btn btn-secondary keypad-btn" data-key="6">6</button>
+            <button type="button" class="btn btn-secondary keypad-btn" data-key="1">1</button><button type="button" class="btn btn-secondary keypad-btn" data-key="2">2</button><button type="button" class="btn btn-secondary keypad-btn" data-key="3">3</button>
+            <button type="button" class="btn btn-secondary keypad-btn" data-key="C" style="background:#5c352a; color:#ff9d80;">C</button><button type="button" class="btn btn-secondary keypad-btn" data-key="0">0</button><button type="button" class="btn btn-secondary keypad-btn" data-key=".">.</button>
+        </div>
+
+        <div style="display:flex; gap:0.5rem;">
+            <button type="button" class="btn btn-outline" data-action="close-modal-weigh" style="flex:1; justify-content:center; height:46px;">
+                Cancelar
+            </button>
+            <button type="button" class="btn btn-primary" id="btnRegisterCut" style="flex:2; justify-content:center; height:46px; font-size:1.05rem; font-weight:700;">
+                <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px; margin-right:6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                REGISTRAR CORTE
+            </button>
         </div>
     </div>
 </div>

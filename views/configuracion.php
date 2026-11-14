@@ -188,7 +188,7 @@ ob_start();
                         </div>
 
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Producto Canal (SAPROD)</label>
+                            <label class="form-label">Producto Canal</label>
                             <select name="codprod" id="sel_codprod" class="form-input" required>
                                 <option value="">-- Seleccione Producto Canal --</option>
                             </select>
@@ -442,7 +442,7 @@ ob_start();
             </div>
 
             <div class="form-group" id="grupo_modal_sel_corte">
-                <label class="form-label">Seleccionar Corte (SAPROD)</label>
+                <label class="form-label">Seleccionar Corte</label>
                 <select name="corte" id="modal_sel_corte" class="form-input" required>
                     <option value="">-- Cargando cortes disponibles --</option>
                 </select>

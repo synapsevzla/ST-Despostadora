@@ -21,6 +21,7 @@ final class DeboningController
             $fechaDesde = !empty($_GET['fecha_desde']) ? trim((string)$_GET['fecha_desde']) : null;
             $fechaHasta = !empty($_GET['fecha_hasta']) ? trim((string)$_GET['fecha_hasta']) : null;
             $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+            $initialOrder = !empty($_GET['order']) ? trim((string)$_GET['order']) : '';
 
             $species = ConfigService::getSpeciesList();
             $activeOrders = DeboningService::getActiveOrders();
@@ -35,6 +36,7 @@ final class DeboningController
                 'pagination' => $ordersPagination,
                 'fechaDesde' => $ordersPagination['fecha_desde'],
                 'fechaHasta' => $ordersPagination['fecha_hasta'],
+                'initialOrder' => $initialOrder,
                 'csrf_token' => $csrfToken,
                 'activeNav' => 'deboning',
                 'title' => 'Líneas de Desposte - ST Despostadora'
@@ -57,6 +59,7 @@ final class DeboningController
             $species = ConfigService::getSpeciesList();
             $mesas = ConfigService::getMesas(true);
             $nextCorrelativo = CorrelativeService::previewNext('DESPOSTE');
+            $selectedEspecie = !empty($_GET['especie']) ? trim((string)$_GET['especie']) : '';
             $csrfToken = Security::generateCsrfToken();
 
             View::render('desposte_nueva', [
@@ -64,6 +67,7 @@ final class DeboningController
                 'species' => $species,
                 'mesas' => $mesas,
                 'nextCorrelativo' => $nextCorrelativo,
+                'selectedEspecie' => $selectedEspecie,
                 'csrf_token' => $csrfToken,
                 'activeNav' => 'deboning',
                 'title' => 'Nueva Orden de Desposte - ST Despostadora'

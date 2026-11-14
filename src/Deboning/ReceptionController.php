@@ -61,6 +61,7 @@ final class ReceptionController
             $deposits = ConfigService::getDeposits();
             $defaultCodUbic = ConfigService::getConfig('DEFAULT_CODUBIC', '');
             $nextCorrelativo = CorrelativeService::previewNext('RECEPCION');
+            $selectedEspecie = !empty($_GET['especie']) ? trim((string)$_GET['especie']) : '';
             $csrfToken = Security::generateCsrfToken();
 
             View::render('recepcion_nueva', [
@@ -69,6 +70,7 @@ final class ReceptionController
                 'deposits' => $deposits,
                 'defaultCodUbic' => $defaultCodUbic,
                 'nextCorrelativo' => $nextCorrelativo,
+                'selectedEspecie' => $selectedEspecie,
                 'csrf_token' => $csrfToken,
                 'activeNav' => 'recepcion',
                 'title' => 'Nueva Recepción de Canales - ST Despostadora'
