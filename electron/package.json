@@ -4,10 +4,12 @@
   "description": "Sistema de Control Operativo de Desposte y Rendimiento Cárnico",
   "main": "main.js",
   "author": "Soluciones Totales",
+  "homepage": "https://solucionestotales.com",
   "license": "Proprietary",
   "scripts": {
     "start": "electron .",
-    "build:win": "electron-builder --win --x64"
+    "build:win": "electron-builder --win --x64 --config.directories.output=../dist_windows",
+    "build:linux": "electron-builder --linux deb --config.directories.output=../dist_linux"
   },
   "dependencies": {
     "dotenv": "^16.4.7"
@@ -19,9 +21,6 @@
   "build": {
     "appId": "com.solucionestotales.despostadora",
     "productName": "ST Despostadora",
-    "directories": {
-      "output": "../dist_windows"
-    },
     "files": [
       "main.js",
       "preload.js",
@@ -35,13 +34,6 @@
       {
         "from": "../dist_web",
         "to": "dist_web",
-        "filter": [
-          "**/*"
-        ]
-      },
-      {
-        "from": "php-win",
-        "to": "php-win",
         "filter": [
           "**/*"
         ]
@@ -62,7 +54,39 @@
           ]
         }
       ],
-      "icon": "assets/icon.ico"
+      "icon": "assets/icon.ico",
+      "extraResources": [
+        {
+          "from": "php-win",
+          "to": "php-win",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office",
+      "maintainer": "Soluciones Totales <soporte@solucionestotales.com>",
+      "synopsis": "Sistema de Control Operativo de Desposte y Rendimiento Cárnico",
+      "description": "Sistema de pesajes, control y rendimiento cárnico conectado a Microsoft SQL Server."
+    },
+    "deb": {
+      "depends": [
+        "php-cli (>= 8.1) | php (>= 8.1)",
+        "libnotify4",
+        "libxtst6",
+        "libnss3"
+      ]
     },
     "nsis": {
       "oneClick": false,

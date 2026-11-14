@@ -19,8 +19,20 @@ class PhpManager {
 
         if (app.isPackaged) {
             const resPath = process.resourcesPath;
-            phpExe = path.join(resPath, 'php-win', 'php.exe');
-            phpIni = path.join(resPath, 'php-win', 'php.ini');
+            if (process.platform === 'win32') {
+                phpExe = path.join(resPath, 'php-win', 'php.exe');
+                phpIni = path.join(resPath, 'php-win', 'php.ini');
+            } else {
+                // Plataforma Linux / Unix
+                const embeddedPhp = path.join(resPath, 'php-linux', 'bin', 'php');
+                if (fs.existsSync(embeddedPhp)) {
+                    phpExe = embeddedPhp;
+                    phpIni = path.join(resPath, 'php-linux', 'etc', 'php.ini');
+                } else {
+                    phpExe = 'php';
+                    phpIni = null;
+                }
+            }
             publicPath = path.join(resPath, 'dist_web', 'public');
         } else {
             // Entorno de desarrollo

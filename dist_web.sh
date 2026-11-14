@@ -137,11 +137,15 @@ rm -f "${DIST_DIR}/GEMINI.md" \
      "${DIST_DIR}/.gitignore" \
      "${DIST_DIR}/.env" \
      "${DIST_DIR}/license_cache.json" \
-     "${DIST_DIR}/dist_web.sh" 2>/dev/null || true
+     "${DIST_DIR}/dist_web.sh" \
+     "${DIST_DIR}/dist_windows.sh" \
+     "${DIST_DIR}/dist_linux.sh" 2>/dev/null || true
 
 rm -rf "${DIST_DIR}/yakpro-po" \
        "${DIST_DIR}/dist_windows" \
+       "${DIST_DIR}/dist_linux" \
        "${DIST_DIR}/dist_web" \
+       "${DIST_DIR}/electron" \
        "${DIST_DIR}/scratch" \
        "${DIST_DIR}/VARIOS" \
        "${DIST_DIR}/.git" 2>/dev/null || true

@@ -11,6 +11,7 @@ scratch/
 yakpro-po/*
 !yakpro-po/yakpro-po.cnf
 dist_windows/
+dist_linux/
 dist_web/
 electron/node_modules/
 electron/php-win/
