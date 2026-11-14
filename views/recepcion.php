@@ -91,6 +91,7 @@ ob_start();
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">CostAct ERP</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Costo Total</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: center;">Estado</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: center;">Doc. ERP</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: center;">Acción</th>
                         </tr>
                     </thead>
@@ -141,6 +142,21 @@ ob_start();
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                                    <?php if (!empty($rec['DocEsperaProcesado'])): ?>
+                                        <span class="badge badge-success" style="font-size: 0.75rem; font-family: monospace;" title="Procesado oficialmente en Saint ERP (Operación: <?= Security::escape($rec['DocEsperaTipoOpIFinal'] ?? 'O') ?>)">
+                                            PROCESADO <?= !empty($rec['DocEsperaNumeroDOficial']) ? '#' . Security::escape($rec['DocEsperaNumeroDOficial']) : '' ?>
+                                        </span>
+                                    <?php elseif (!empty($rec['DocEsperaEnviado'])): ?>
+                                        <span class="badge" style="background: rgba(30, 144, 255, 0.15); color: #2196f3; border: 1px solid rgba(30, 144, 255, 0.3); font-size: 0.75rem; font-family: monospace;" title="Documento en Espera registrado en Saint ERP">
+                                            EN ESPERA
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.75rem;">
+                                            PENDIENTE
+                                        </span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
                                     <?php if ($rec['MetodoEntrada'] === 'PESO_INDIVIDUAL'): ?>
                                         <button type="button" class="btn btn-ver-piezas" style="background: var(--bg-card); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 0.3rem 0.6rem; color: var(--primary);" 
                                                 data-nrorec="<?= Security::escape($rec['NroRecepcion']) ?>">
@@ -181,6 +197,12 @@ ob_start();
                                     <span class="badge" style="background: rgba(216, 134, 94, 0.15); color: var(--accent); font-size: 0.7rem;">LOTE</span>
                                 <?php else: ?>
                                     <span class="badge badge-warning" style="font-size: 0.7rem;">INDIVIDUAL</span>
+                                <?php endif; ?>
+
+                                <?php if (!empty($rec['DocEsperaProcesado'])): ?>
+                                    <span class="badge badge-success" style="font-size: 0.7rem; font-family: monospace;" title="Procesado en Saint ERP">ERP #<?= Security::escape($rec['DocEsperaNumeroDOficial'] ?? '') ?></span>
+                                <?php elseif (!empty($rec['DocEsperaEnviado'])): ?>
+                                    <span class="badge" style="background: rgba(30, 144, 255, 0.15); color: #2196f3; font-size: 0.7rem; font-family: monospace;" title="Documento en Espera en Saint ERP">ERP ESPERA</span>
                                 <?php endif; ?>
                             </div>
                         </div>

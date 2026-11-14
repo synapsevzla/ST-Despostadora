@@ -168,7 +168,24 @@ final class ReceptionService
             $stmtStock->bindValue(':costo', $costActCanal, PDO::PARAM_STR);
             $stmtStock->execute();
 
-            // 7. Auditoría
+            // 7. Colocar Documento en Espera de Inventario en el ERP Saint (SAOPEI / SAITEMOPI)
+            $recData = [
+                'CodProdCanal' => $codProdCanal,
+                'CodUbic' => $codUbic,
+                'MetodoEntrada' => $metodoEntrada,
+                'PesoTotalNeto' => $pesoNeto,
+                'CostoTotalNeto' => $costoTotalNeto,
+                'CantidadEspecies' => $cantidadEspecies,
+            ];
+            ReceptionErpHoldService::insertReceptionHoldDocument(
+                $pdo,
+                $nroRecepcion,
+                $codusua,
+                $recData,
+                $pesosIndividuales
+            );
+
+            // 8. Auditoría
             AuditService::log('RECEPCION', $nroRecepcion, 'CREAR_RECEPCION', $codusua, [
                 'NroRecepcion' => $nroRecepcion,
                 'CodProdCanal' => $codProdCanal,
@@ -176,7 +193,8 @@ final class ReceptionService
                 'CantidadEspecies' => $cantidadEspecies,
                 'PesoNeto' => $pesoNeto,
                 'CostActCanal' => $costActCanal,
-                'CostoTotalNeto' => $costoTotalNeto
+                'CostoTotalNeto' => $costoTotalNeto,
+                'DocEsperaNumeroD' => $nroRecepcion
             ], $pdo);
 
             $pdo->commit();
@@ -196,6 +214,14 @@ final class ReceptionService
     public static function getReceptions(?string $estado = null): array
     {
         $pdo = Database::getConnection();
+
+        // Sincronizar automáticamente recepciones que hayan sido procesadas en Saint ERP
+        try {
+            ReceptionErpHoldService::syncProcessedStatus($pdo);
+        } catch (\Throwable $e) {
+            error_log('[SYNC ERP ERROR] ' . $e->getMessage());
+        }
+
         $sql = "SELECT 
                     r.NroRecepcion,
                     r.FechaHora,
@@ -212,6 +238,13 @@ final class ReceptionService
                     CAST(r.PesoTotalNeto AS FLOAT) AS PesoTotalNeto,
                     CAST(r.CostoTotalNeto AS FLOAT) AS CostoTotalNeto,
                     CAST(r.PesoDisponible AS FLOAT) AS PesoDisponible,
+                    CAST(ISNULL(r.DocEsperaEnviado, 0) AS INT) AS DocEsperaEnviado,
+                    ISNULL(r.DocEsperaNumeroD, '') AS DocEsperaNumeroD,
+                    r.FechaDocEspera,
+                    CAST(ISNULL(r.DocEsperaProcesado, 0) AS INT) AS DocEsperaProcesado,
+                    ISNULL(r.DocEsperaNumeroDOficial, '') AS DocEsperaNumeroDOficial,
+                    ISNULL(r.DocEsperaTipoOpIFinal, '') AS DocEsperaTipoOpIFinal,
+                    r.FechaDocEsperaProcesado,
                     r.Estado,
                     r.Observaciones
                 FROM ST_Despostadora_Recepciones r
@@ -249,6 +282,13 @@ final class ReceptionService
         ?string $estado = null
     ): array {
         $pdo = Database::getConnection();
+
+        // Sincronizar automáticamente recepciones que hayan sido procesadas en Saint ERP
+        try {
+            ReceptionErpHoldService::syncProcessedStatus($pdo);
+        } catch (\Throwable $e) {
+            error_log('[SYNC ERP ERROR] ' . $e->getMessage());
+        }
 
         $where = [];
         $params = [];
@@ -315,6 +355,13 @@ final class ReceptionService
                         CAST(r.PesoTotalNeto AS FLOAT) AS PesoTotalNeto,
                         CAST(r.CostoTotalNeto AS FLOAT) AS CostoTotalNeto,
                         CAST(r.PesoDisponible AS FLOAT) AS PesoDisponible,
+                        CAST(ISNULL(r.DocEsperaEnviado, 0) AS INT) AS DocEsperaEnviado,
+                        ISNULL(r.DocEsperaNumeroD, '') AS DocEsperaNumeroD,
+                        r.FechaDocEspera,
+                        CAST(ISNULL(r.DocEsperaProcesado, 0) AS INT) AS DocEsperaProcesado,
+                        ISNULL(r.DocEsperaNumeroDOficial, '') AS DocEsperaNumeroDOficial,
+                        ISNULL(r.DocEsperaTipoOpIFinal, '') AS DocEsperaTipoOpIFinal,
+                        r.FechaDocEsperaProcesado,
                         r.Estado,
                         r.Observaciones
                     FROM ST_Despostadora_Recepciones r

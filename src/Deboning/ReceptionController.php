@@ -148,7 +148,7 @@ final class ReceptionController
 
             echo json_encode([
                 'success' => true,
-                'message' => "Recepción {$nroRecepcion} registrada exitosamente.",
+                'message' => "Recepción {$nroRecepcion} registrada y colocada como Documento en Espera en el ERP exitosamente.",
                 'nro_recepcion' => $nroRecepcion
             ]);
         } catch (Throwable $e) {
@@ -172,6 +172,32 @@ final class ReceptionController
             $nrorec = trim((string)($_GET['nrorec'] ?? ''));
             $details = ReceptionService::getReceptionDetail($nrorec);
             echo json_encode(['success' => true, 'details' => $details]);
+        } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Endpoint API para consultar el estado del Documento en Espera en el ERP Saint.
+     */
+    public static function erpStatus(): void
+    {
+        AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        try {
+            $nrorec = trim((string)($_GET['nrorec'] ?? ''));
+            if ($nrorec === '') {
+                echo json_encode(['success' => false, 'error' => 'Correlativo de recepción requerido.']);
+                return;
+            }
+            $pdo = Database::getConnection();
+            $status = ReceptionErpHoldService::getHoldDocumentStatus($pdo, $nrorec);
+            echo json_encode(['success' => true, 'data' => $status]);
         } catch (Throwable $e) {
             if (Database::isConnectionError($e)) {
                 Database::handleApiError($e);

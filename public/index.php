@@ -13,6 +13,7 @@ require_once __DIR__ . '/../src/Auth/AuthController.php';
 require_once __DIR__ . '/../src/Deboning/CorrelativeService.php';
 require_once __DIR__ . '/../src/Deboning/ConfigService.php';
 require_once __DIR__ . '/../src/Deboning/ConfigController.php';
+require_once __DIR__ . '/../src/Deboning/ReceptionErpHoldService.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionService.php';
 require_once __DIR__ . '/../src/Deboning/ReceptionController.php';
 require_once __DIR__ . '/../src/Deboning/YieldCalculator.php';
@@ -90,6 +91,10 @@ try {
 
     case '/api/recepcion/detalle':
         ReceptionController::detail();
+        break;
+
+    case '/api/recepcion/erp-status':
+        ReceptionController::erpStatus();
         break;
 
     case '/api/config/general':
