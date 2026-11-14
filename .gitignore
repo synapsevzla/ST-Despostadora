@@ -8,7 +8,8 @@ scratch/
 .cache/
 
 #herramientas de tercer que no van a github
-yakpro-po/
+yakpro-po/*
+!yakpro-po/yakpro-po.cnf
 dist_windows/
 dist_web/
 
