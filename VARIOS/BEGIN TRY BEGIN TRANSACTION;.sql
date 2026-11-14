@@ -1,0 +1,230 @@
+BEGIN TRY BEGIN TRANSACTION;
+
+--INSERTAMOS LA OPERACION BASE DE INVENTARIO
+INSERT INTO
+	SAOPEI (
+		CodSucu,
+		TipoOpI,
+		NumeroD,
+		CodEsta,
+		CodUsua,
+		CodUbic,
+		CodUbic2,
+		Signo,
+		FechaT,
+		OTipo,
+		ONumero,
+		Autori,
+		Respon,
+		UsoMat,
+		OrdenC,
+		Monto,
+		FechaE,
+		FechaV,
+		CodOper,
+		UsoInterno,
+		CodClie,
+		NroTurno,
+		Notas1,
+		Notas2,
+		Notas3,
+		Notas4,
+		Notas5,
+		Notas6,
+		Notas7,
+		Notas8,
+		Notas9,
+		Notas10 --en esta columna queremos que se guarde una copia del numero de orden de DESPOSTE
+	)
+SELECT
+	'00000',
+	'R',
+	ORDENNRO,
+	CODESTA,
+	CODUSUA,
+	CODUBIC,
+	NULL,
+	-1,
+	FECHAE,
+	NULL,
+	NULL,
+	'DOCUMENTO EN ESPERA PRODUCCION', --AQUI EN VES DE USAR EL TITULO DE DOCUMENTO EN ESPERA PRODUCCION QUEREMOS QUE SE GUARDE LA PALABARA DOC. ESPERA. Y EL NRO DE LA ORDEN DE DESPOSTE
+	(
+		SELECT
+			Descrip
+		FROM
+			SSUSRS
+		WHERE
+			CODUSUA = T1.CODUSUA
+	),
+	NULL,
+	ORDENNRO,
+	0,
+	FECHAE,
+	NULL,
+	CODOPER,
+	0,
+	NULL,
+	0,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	ORDENNRO,
+	NROUNICO,
+	NULL,
+	NULL,
+	NULL,
+	NULL
+FROM
+	STB_PRODUCCION_ORDEN T1
+WHERE
+	ORDENNRO = '[ORDENNRO]';
+
+--INSERTAMOS LA ITEM RELACIONADOS A LA OPERACION DE INVENTARIO
+INSERT INTO
+	SAITEMOPI (
+		CodSucu,
+		TipoOpI,
+		NumeroD,
+		NroLinea,
+		NroLineaC,
+		CodItem,
+		CodUbic,
+		CodUbic2,
+		Descrip1,
+		Descrip2,
+		Descrip3,
+		Descrip4,
+		Descrip5,
+		Descrip6,
+		Descrip7,
+		Descrip8,
+		Descrip9, --AQUI QUEREMOS QUE SE GUARDE DEPENDIENDO DEL TIPO DE ORDEN DE PRODUCCION QUE SE PROCESA LA CANTIDAD DE PIEZAS DESPOSTADA YA QUE SAINT SOLO MANEJA UN CAMPO DE CANTIDAD Y EL RESTO DE CAMPOS DE CANTIDADES ESTA ASOCIADOS A OTRAS OPERACIONES DE SAINT Y NO A ESTA OPERACION COMO TAL
+		Descrip10, --COMO SAINT ASIGNA UN NRO DE DOCUMENTO DISTINTO CUANDO DESPUES DE PROCESAR EL DOCUMENTO EN ESPERA Y ESE NUMERO ES DISTINTO A DE LA ORDEN DE DESPOSTE ASOCIADO AQUI QUEREMOS QUE TAMBIEN SE GUARDE EL NRO DE ORDEN DE DESPOSTE PARA PODER HACER LA RELACION ENTRE AMBOS DOCUMENTOS
+		Refere,
+		Signo,
+		Tara,
+		Factor,
+		CantidadD,
+		CantidadT,
+		Cantidad, --AQUI GUARDAREMOS LA CANTIDAD DE KILOS DE LA ORDEN DE DESPOSTE QUE SE ESTA PROCESANDO YA QUE SAINT SOLO ALMECENA LOS QUILOS.
+		CantidadO,
+		ExistAntU,
+		ExistAnt,
+		ExistAntU2,
+		ExistAnt2,
+		CantidadC,
+		CantidadU,
+		CantidadA,
+		CantidadUA,
+		Costo,
+		Descto,
+		CodMeca,
+		TotalItem,
+		NroUnicoL,
+		NroLote,
+		Precio,
+		PrecioU,
+		FechaE,
+		FechaL,
+		FechaV,
+		EsServ,
+		EsUnid,
+		EsFreeP,
+		EsPesa,
+		EsExento,
+		UsaServ,
+		DEsLote,
+		DEsSeri
+	)
+SELECT
+	'00000',
+	'R',
+	T1.ORDENNRO,
+	ROW_NUMBER() OVER (
+		PARTITION BY
+			T2.ORDENNRO
+		ORDER BY
+			T2.ORDENNRO,
+			T2.NROLINEA,
+			T3.NroUnico
+	),
+	0,
+	T3.CodAlte,
+	T1.CODUBIC,
+	NULL,
+	T4.Descrip,
+	T4.Descrip2,
+	T4.Descrip3,
+	NULL,
+	T1.ORDENNRO,
+	T1.NROUNICO,
+	T2.CODPROD,
+	T2.NROLINEA,
+	T2.DESCRIP1,
+	T2.DESCRIP2,
+	T3.CodAlte,
+	1,
+	0,
+	0,
+	0,
+	0,
+	CONVERT(DECIMAL(28, 4), T2.CANTIDAD * T3.Cantidad),
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	CONVERT(
+		DECIMAL(28, 4),
+		CASE
+			WHEN T3.EsUnid = 0 THEN T4.CostAct
+			ELSE COALESCE(T4.CostAct / NULLIF(T4.CantEmpaq, 0), 0)
+		END
+	),
+	0,
+	NULL,
+	CONVERT(
+		DECIMAL(28, 4),
+		CASE
+			WHEN T3.EsUnid = 0 THEN T4.CostAct * (T2.CANTIDAD * T3.Cantidad)
+			ELSE COALESCE(T4.CostAct / NULLIF(T4.CantEmpaq, 0), 0) * (T2.CANTIDAD * T3.Cantidad)
+		END
+	),
+	0,
+	NULL,
+	0,
+	0,
+	T2.FECHAE,
+	T2.FECHAE,
+	NULL,
+	T3.EsServ,
+	T3.EsUnid,
+	0,
+	0,
+	T4.EsExento,
+	0,
+	T4.DEsLote,
+	T4.DEsSeri
+FROM
+	STB_PRODUCCION_ORDEN T1
+	INNER JOIN STB_PRODUICCION_ORDEN_ITEMS T2 ON T1.ORDENNRO = T2.ORDENNRO
+	AND T1.NROUNICO = T2.NROPPAL
+	INNER JOIN SAPART T3 ON T2.CODPROD = T3.CodProd
+	INNER JOIN SAPROD T4 ON T4.CodProd = T3.CodAlte
+WHERE
+	T1.ORDENNRO = '[ORDENNRO]'
+	AND T3.EsServ = 0
+ORDER BY
+	T1.ORDENNRO,
+	T2.NROLINEA,
+	T3.NroUnico;
+
+COMMIT TRANSACTION;
+
+END TRY BEGIN CATCH ROLLBACK TRANSACTION PRINT 'ERROR AL INTENTAR REGISTRAR UNA O MAS OPERACIONES' END CATCH
