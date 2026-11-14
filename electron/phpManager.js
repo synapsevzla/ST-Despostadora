@@ -17,7 +17,7 @@ class PhpManager {
         let phpIni;
         let publicPath;
 
-        if (app.isPackaged) {
+        if (app && app.isPackaged) {
             const resPath = process.resourcesPath;
             if (process.platform === 'win32') {
                 phpExe = path.join(resPath, 'php-win', 'php.exe');
@@ -36,12 +36,16 @@ class PhpManager {
             publicPath = path.join(resPath, 'dist_web', 'public');
         } else {
             // Entorno de desarrollo
-            const winPhp = path.join(__dirname, 'php-win', 'php.exe');
-            if (fs.existsSync(winPhp)) {
-                phpExe = winPhp;
-                phpIni = path.join(__dirname, 'php-win', 'php.ini');
+            if (process.platform === 'win32') {
+                const winPhp = path.join(__dirname, 'php-win', 'php.exe');
+                if (fs.existsSync(winPhp)) {
+                    phpExe = winPhp;
+                    phpIni = path.join(__dirname, 'php-win', 'php.ini');
+                } else {
+                    phpExe = 'php';
+                    phpIni = null;
+                }
             } else {
-                // Fallback a PHP local del sistema si estamos desarrollando en Linux/macOS
                 phpExe = 'php';
                 phpIni = null;
             }
@@ -63,33 +67,33 @@ class PhpManager {
         const user = params.DB_USER || '';
         const pass = params.DB_PASS || '';
         const driver = params.DB_DRIVER || 'sqlsrv';
-        const timeout = params.DB_TIMEOUT || '4';
+        const timeout = Number(params.DB_TIMEOUT) || 4;
 
         // Script PHP inline seguro para probar conexión PDO
         const phpCode = `
             error_reporting(0);
-            \\$driver = '${driver}';
-            \\$host = '${host}';
-            \\$port = '${port}';
-            \\$dbname = '${dbname}';
-            \\$user = '${user}';
-            \\$pass = '${pass}';
-            \\$timeout = ${timeout};
+            $driver = ${JSON.stringify(driver)};
+            $host = ${JSON.stringify(host)};
+            $port = ${JSON.stringify(port)};
+            $dbname = ${JSON.stringify(dbname)};
+            $user = ${JSON.stringify(user)};
+            $pass = ${JSON.stringify(pass)};
+            $timeout = (int)${timeout};
 
-            if (\\$driver === 'sqlsrv') {
-                \\$dsn = "sqlsrv:Server={\\$host},{\\$port};Database={\\$dbname};TrustServerCertificate=true;LoginTimeout={\\$timeout}";
+            if ($driver === 'sqlsrv') {
+                $dsn = 'sqlsrv:Server=' . $host . ',' . $port . ';Database=' . $dbname . ';TrustServerCertificate=true;LoginTimeout=' . $timeout;
             } else {
-                \\$dsn = "dblib:host={\\$host}:{\\$port};dbname={\\$dbname};timeout={\\$timeout}";
+                $dsn = 'dblib:host=' . $host . ':' . $port . ';dbname=' . $dbname . ';timeout=' . $timeout;
             }
 
             try {
-                \\$pdo = new PDO(\\$dsn, \\$user, \\$pass, [
+                $pdo = new PDO($dsn, $user, $pass, [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_TIMEOUT => \\$timeout
+                    PDO::ATTR_TIMEOUT => $timeout
                 ]);
                 echo json_encode(['success' => true]);
-            } catch (Throwable \\$e) {
-                echo json_encode(['success' => false, 'error' => \\$e->getMessage()]);
+            } catch (Throwable $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
             }
         `;
 

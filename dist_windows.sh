@@ -132,7 +132,7 @@ mkdir -p "${DIST_WIN_DIR}"
 info "Empaquetando ejecutable de Windows con electron-builder..."
 (
     cd "${ELECTRON_DIR}"
-    ./node_modules/.bin/electron-builder --win --x64
+    ./node_modules/.bin/electron-builder --win --x64 --config.directories.output=../dist_windows
 )
 
 # 8. Verificación final de entregables

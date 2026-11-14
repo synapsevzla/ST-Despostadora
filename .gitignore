@@ -14,6 +14,7 @@ dist_windows/
 dist_linux/
 dist_web/
 electron/node_modules/
+electron/dist/
 electron/php-win/
 
 # SO y Editores
