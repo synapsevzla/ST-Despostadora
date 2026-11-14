@@ -113,6 +113,7 @@ async function loadOrderInStation(nroOrden) {
         if (!json.success || !json.balance) return showAlert(json.error || 'No se pudo cargar la orden', 'danger');
 
         currentOrder = json.balance.orden;
+        window.currentOrder = currentOrder;
         switchView('station');
         window.history.replaceState({ order: nroOrden }, '', `${getBasePath()}?order=${encodeURIComponent(nroOrden)}`);
         sessionStorage.setItem('st_active_deboning_order', nroOrden);
@@ -237,6 +238,31 @@ function renderBalanceAndTable(balance) {
     const isFinalized = (ord.Estado === 'FINALIZADO');
     const btnClose = document.getElementById('btnPromptCloseStation');
     if (btnClose) btnClose.style.display = isFinalized ? 'none' : 'inline-flex';
+
+    const btnStationErp = document.getElementById('btnStationErpDocs');
+    const badgeStationErp = document.getElementById('stationErpBadge');
+    if (btnStationErp && badgeStationErp) {
+        const hasErp = isFinalized || (ord.DocDescargoEnviado == 1 || ord.DocCargoEnviado == 1);
+        btnStationErp.style.display = hasErp ? 'inline-flex' : 'none';
+        if (hasErp) {
+            const cruce = ord.EstadoCruceERP || 'PENDIENTE_CIERRE';
+            badgeStationErp.className = 'badge';
+            if (cruce === 'TOTALMENTE_PROCESADO') {
+                badgeStationErp.className += ' badge-success';
+                badgeStationErp.textContent = 'PROCESADO (OK)';
+            } else if (cruce.startsWith('ERROR_')) {
+                badgeStationErp.className += ' badge-danger';
+                badgeStationErp.textContent = 'ERROR ERP';
+            } else if (cruce === 'DESCARGO_OK_CARGO_PEND' || cruce === 'CARGO_OK_DESCARGO_PEND') {
+                badgeStationErp.className += ' badge-warning';
+                badgeStationErp.textContent = 'PARCIAL';
+            } else {
+                badgeStationErp.style.background = 'rgba(30, 144, 255, 0.15)';
+                badgeStationErp.style.color = '#2196f3';
+                badgeStationErp.textContent = 'DOCS EN ESPERA';
+            }
+        }
+    }
 
     document.getElementById('statPesoCanal').textContent = `${parseFloat(ord.PesoCanalEntrada).toFixed(4)} kg`;
     document.getElementById('statCostoCanal').textContent = `$${parseFloat(ord.CostActCanal).toFixed(2)} /kg`;

@@ -315,9 +315,17 @@ final class DeboningService
     {
         $pdo = Database::getConnection();
 
+        // Sincronizar cruce ERP si la orden está finalizada
+        DeboningErpHoldService::syncDeboningCruceStatus($pdo, $nroOrden);
+
         $stmtOrd = $pdo->prepare("SELECT d.NroOrdenDesposte, d.NroRecepcion, d.LineaMesa, d.FechaHoraInicio,
                                          d.CodProdCanal, d.CostActCanal, d.PesoCanalEntrada, d.CostoTotalCanal,
                                          d.Estado, r.CodUbic,
+                                         d.DocDescargoEnviado, d.DocDescargoNumeroD, d.DocDescargoProcesado,
+                                         d.DocDescargoNumeroDOficial, d.DocDescargoTipoOpIFinal, d.FechaDocDescargoProcesado,
+                                         d.DocCargoEnviado, d.DocCargoNumeroD, d.DocCargoProcesado,
+                                         d.DocCargoNumeroDOficial, d.DocCargoTipoOpIFinal, d.FechaDocCargoProcesado,
+                                         d.EstadoCruceERP,
                                          LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal
                                   FROM ST_Despostadora_Despostes d
                                   INNER JOIN ST_Despostadora_Recepciones r ON r.NroRecepcion = d.NroRecepcion

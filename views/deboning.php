@@ -238,16 +238,18 @@ ob_start();
                                     <?php else: ?>
                                         <?php 
                                             $cruce = $o['EstadoCruceERP'] ?? 'PENDIENTE_CIERRE';
+                                            $ordNro = Security::escape($o['NroOrdenDesposte']);
+                                            $clickAttr = 'data-action="show-erp-docs" data-order="' . $ordNro . '" style="cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Haga clic para ver documentos de espera y oficiales en Saint ERP"';
                                             if ($cruce === 'TOTALMENTE_PROCESADO'): ?>
-                                                <span class="badge badge-success" style="font-size: 0.75rem; font-family: monospace;" title="Descargo: <?= Security::escape($o['DocDescargoNumeroDOficial'] ?? '') ?>, Cargo: <?= Security::escape($o['DocCargoNumeroDOficial'] ?? '') ?>">PROCESADO ERP (OK)</span>
+                                                <span class="badge badge-success" <?= $clickAttr ?> style="cursor:pointer; font-size: 0.75rem; font-family: monospace;">PROCESADO ERP (OK) 🔍</span>
                                             <?php elseif ($cruce === 'DESCARGO_OK_CARGO_PEND'): ?>
-                                                <span class="badge badge-warning" style="font-size: 0.75rem; font-family: monospace;" title="Descargo procesado (P), Cargo en espera (R)">DESCARGO OK (CARGO PEND)</span>
+                                                <span class="badge badge-warning" <?= $clickAttr ?> style="cursor:pointer; font-size: 0.75rem; font-family: monospace;">DESCARGO OK (CARGO PEND) 🔍</span>
                                             <?php elseif ($cruce === 'CARGO_OK_DESCARGO_PEND'): ?>
-                                                <span class="badge badge-warning" style="font-size: 0.75rem; font-family: monospace;" title="Cargo procesado (O), Descargo en espera (R)">CARGO OK (DESCARGO PEND)</span>
+                                                <span class="badge badge-warning" <?= $clickAttr ?> style="cursor:pointer; font-size: 0.75rem; font-family: monospace;">CARGO OK (DESCARGO PEND) 🔍</span>
                                             <?php elseif (str_starts_with((string)$cruce, 'ERROR_')): ?>
-                                                <span class="badge" style="background: rgba(238, 103, 55, 0.2); color: #ff5252; border: 1px solid rgba(238, 103, 55, 0.4); font-size: 0.75rem; font-family: monospace;" title="Operación procesada con letra errada en el ERP">ERROR OPERACIÓN ERP</span>
+                                                <span class="badge" <?= $clickAttr ?> style="cursor:pointer; background: rgba(238, 103, 55, 0.2); color: #ff5252; border: 1px solid rgba(238, 103, 55, 0.4); font-size: 0.75rem; font-family: monospace;">ERROR OPERACIÓN ERP ⚠️</span>
                                             <?php elseif (!empty($o['DocDescargoEnviado']) || !empty($o['DocCargoEnviado'])): ?>
-                                                <span class="badge" style="background: rgba(30, 144, 255, 0.15); color: #2196f3; border: 1px solid rgba(30, 144, 255, 0.3); font-size: 0.75rem; font-family: monospace;" title="Descargo y Cargo en espera registrados en Saint">DOCS EN ESPERA</span>
+                                                <span class="badge" <?= $clickAttr ?> style="cursor:pointer; background: rgba(30, 144, 255, 0.15); color: #2196f3; border: 1px solid rgba(30, 144, 255, 0.3); font-size: 0.75rem; font-family: monospace;">DOCS EN ESPERA 🔍</span>
                                             <?php else: ?>
                                                 <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;">PENDIENTE</span>
                                             <?php endif; ?>
@@ -295,13 +297,16 @@ ob_start();
                                 <?php endif; ?>
 
                                 <?php if ($o['Estado'] === 'FINALIZADO'): ?>
-                                    <?php $cruce = $o['EstadoCruceERP'] ?? 'PENDIENTE_CIERRE'; ?>
+                                    <?php 
+                                        $cruce = $o['EstadoCruceERP'] ?? 'PENDIENTE_CIERRE';
+                                        $mAttr = 'data-action="show-erp-docs" data-order="' . Security::escape($o['NroOrdenDesposte']) . '" style="cursor:pointer;"';
+                                    ?>
                                     <?php if ($cruce === 'TOTALMENTE_PROCESADO'): ?>
-                                        <span class="badge badge-success" style="font-size: 0.7rem; font-family: monospace;">ERP OK</span>
+                                        <span class="badge badge-success" <?= $mAttr ?> style="cursor:pointer; font-size: 0.7rem; font-family: monospace;">ERP OK 🔍</span>
                                     <?php elseif (str_starts_with((string)$cruce, 'ERROR_')): ?>
-                                        <span class="badge badge-danger" style="background: rgba(238, 103, 55, 0.2); color: #ff5252; font-size: 0.7rem;">ERP ERROR</span>
+                                        <span class="badge badge-danger" <?= $mAttr ?> style="cursor:pointer; background: rgba(238, 103, 55, 0.2); color: #ff5252; font-size: 0.7rem;">ERP ERROR ⚠️</span>
                                     <?php elseif (!empty($o['DocDescargoEnviado']) || !empty($o['DocCargoEnviado'])): ?>
-                                        <span class="badge" style="background: rgba(30, 144, 255, 0.15); color: #2196f3; font-size: 0.7rem;">ERP ESPERA</span>
+                                        <span class="badge" <?= $mAttr ?> style="cursor:pointer; background: rgba(30, 144, 255, 0.15); color: #2196f3; font-size: 0.7rem;">ERP ESPERA 🔍</span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -418,6 +423,9 @@ ob_start();
                 <span class="badge" id="stationMesaBadge" style="background:var(--primary); color:#fff; font-weight:700; font-size:0.85rem; display:none;"></span>
                 <span style="font-size:1.15rem; font-weight:700; margin-left:0.5rem; color:var(--text-primary);" id="stationOrderTitle">DESP-0000000000000001</span>
                 <span style="font-size:0.9rem; color:var(--text-secondary); margin-left:0.75rem;" id="stationCanalSubtitle">Novillo Especial (CARNEC)</span>
+                <button type="button" class="btn btn-outline" id="btnStationErpDocs" data-action="show-erp-docs-station" style="display:none; margin-left:0.75rem; padding:0.25rem 0.6rem; font-size:0.75rem; align-items:center; gap:5px;" title="Ver detalle de documentos de espera y oficiales en Saint ERP">
+                    <span>🔗 Cruce ERP:</span> <span id="stationErpBadge" class="badge" style="font-size:0.7rem;">CONSULTANDO</span>
+                </button>
             </div>
             <div style="display:flex; gap:0.5rem;">
                 <button type="button" class="btn btn-outline" data-action="view-board">
@@ -438,31 +446,11 @@ ob_start();
 
     <!-- Panel de Métricas en Tiempo Real -->
     <div class="deboning-metrics-grid">
-        <div class="card deboning-metric-card">
-            <div class="stat-label">Peso Canal Entrada</div>
-            <div class="stat-val" id="statPesoCanal">0.00 kg</div>
-            <div class="stat-sub" id="statCostoCanal">$0.00 /kg</div>
-        </div>
-        <div class="card deboning-metric-card">
-            <div class="stat-label">Cortes Obtenidos</div>
-            <div class="stat-val stat-primary" id="statPesoCortes">0.00 kg</div>
-            <div class="stat-sub"><span id="statCantCortes">0</span> piezas pesadas</div>
-        </div>
-        <div class="card deboning-metric-card">
-            <div class="stat-label">Merma Física</div>
-            <div class="stat-val stat-danger" id="statPesoMerma">0.00 kg</div>
-            <div class="stat-sub stat-danger" id="statPerdidaMerma">Pérdida: $0.00</div>
-        </div>
-        <div class="card deboning-metric-card">
-            <div class="stat-label">Rendimiento %</div>
-            <div class="stat-val stat-success" id="statRendimiento">0.00%</div>
-            <div class="stat-sub">de aprovechamiento</div>
-        </div>
-        <div class="card deboning-metric-card">
-            <div class="stat-label">Merma %</div>
-            <div class="stat-val stat-accent" id="statMermaPct">0.00%</div>
-            <div class="stat-sub">absorbida en cortes</div>
-        </div>
+        <div class="card deboning-metric-card"><div class="stat-label">Peso Canal Entrada</div><div class="stat-val" id="statPesoCanal">0.00 kg</div><div class="stat-sub" id="statCostoCanal">$0.00 /kg</div></div>
+        <div class="card deboning-metric-card"><div class="stat-label">Cortes Obtenidos</div><div class="stat-val stat-primary" id="statPesoCortes">0.00 kg</div><div class="stat-sub"><span id="statCantCortes">0</span> piezas pesadas</div></div>
+        <div class="card deboning-metric-card"><div class="stat-label">Merma Física</div><div class="stat-val stat-danger" id="statPesoMerma">0.00 kg</div><div class="stat-sub stat-danger" id="statPerdidaMerma">Pérdida: $0.00</div></div>
+        <div class="card deboning-metric-card"><div class="stat-label">Rendimiento %</div><div class="stat-val stat-success" id="statRendimiento">0.00%</div><div class="stat-sub">de aprovechamiento</div></div>
+        <div class="card deboning-metric-card"><div class="stat-label">Merma %</div><div class="stat-val stat-accent" id="statMermaPct">0.00%</div><div class="stat-sub">absorbida en cortes</div></div>
     </div>
 
     <!-- Área de Trabajo: Lista Completa de Cortes y Costeo Real -->
@@ -576,8 +564,11 @@ ob_start();
     </div>
 </div>
 
+<?php require __DIR__ . '/modal_erp_docs.php'; ?>
+
 <link rel="stylesheet" href="/css/deboning.css">
 <script src="/js/deboning.js"></script>
+<script src="/js/deboning_erp_modal.js"></script>
 
 <?php
 $content = ob_get_clean();
