@@ -39,49 +39,74 @@ final class ConfigService
     }
 
     /**
-     * Obtiene productos de SAPROD aptos para desposte (admite decimales y no es empaque).
-     * @return list<array<string, mixed>>
+     * Obtiene productos de SAPROD aptos para desposte con paginación lazy load.
+     * @return array{items: list<array<string, mixed>>, total: int, page: int, per_page: int, has_more: bool}
      */
-    public static function getEligibleProducts(?string $search = null, ?string $codInst = null): array
+    public static function getEligibleProducts(?string $search = null, ?string $codInst = null, int $page = 1, int $perPage = 50, ?string $excludeCodProd = null): array
     {
         $pdo = Database::getConnection();
-        $sql = "SELECT 
-                    T1.CodProd,
-                    LTRIM(RTRIM(CONCAT(T1.Descrip, ' ', T1.Descrip2, ' ', T1.Descrip3))) AS DescripcionCompleta,
-                    T1.Unidad,
-                    CAST(T1.Tara AS FLOAT) AS Tara,
-                    CAST(ISNULL(T1.CostAct, 0) AS FLOAT) AS CostAct,
-                    CAST(ISNULL(T1.Precio1, 0) AS FLOAT) AS Precio1,
-                    T2.CodInst,
-                    T2.Descrip AS Instancia,
-                    CAST(T1.Existen AS FLOAT) AS ExistenciaERPReferencial
-                FROM SAPROD T1
-                INNER JOIN SAINSTA T2 ON T1.CodInst = T2.CodInst
-                WHERE T1.ExDecimal = 1 AND T1.EsEmpaque = 0";
+        $page = max(1, $page);
+        $perPage = max(1, min(100, $perPage));
+        $offset = ($page - 1) * $perPage;
 
+        $where = " WHERE T1.ExDecimal = 1 AND T1.EsEmpaque = 0";
         $params = [];
+
         if ($codInst !== null && trim($codInst) !== '') {
-            $sql .= " AND T1.CodInst = :codinst";
+            $where .= " AND T1.CodInst = :codinst";
             $params[':codinst'] = trim($codInst);
         }
-
+        if ($excludeCodProd !== null && trim($excludeCodProd) !== '') {
+            $where .= " AND T1.CodProd <> :exclude";
+            $params[':exclude'] = trim($excludeCodProd);
+        }
         if ($search !== null && trim($search) !== '') {
-            $sql .= " AND (T1.CodProd LIKE :search1 OR T1.Descrip LIKE :search2 OR T1.Descrip2 LIKE :search3 OR T1.Descrip3 LIKE :search4)";
-            $searchTerm = '%' . trim($search) . '%';
-            $params[':search1'] = $searchTerm;
-            $params[':search2'] = $searchTerm;
-            $params[':search3'] = $searchTerm;
-            $params[':search4'] = $searchTerm;
+            $where .= " AND (T1.CodProd LIKE :s1 OR T1.Descrip LIKE :s2 OR T1.Descrip2 LIKE :s3 OR T1.Descrip3 LIKE :s4)";
+            $st = '%' . trim($search) . '%';
+            $params[':s1'] = $st;
+            $params[':s2'] = $st;
+            $params[':s3'] = $st;
+            $params[':s4'] = $st;
         }
 
-        $sql .= " ORDER BY T2.Descrip ASC, T1.Descrip ASC";
+        $countStmt = $pdo->prepare("SELECT COUNT(*) FROM SAPROD T1 INNER JOIN SAINSTA T2 ON T1.CodInst = T2.CodInst" . $where);
+        foreach ($params as $k => $v) { $countStmt->bindValue($k, $v, PDO::PARAM_STR); }
+        $countStmt->execute();
+        $total = (int)$countStmt->fetchColumn();
+
+        $sql = "SELECT T1.CodProd, LTRIM(RTRIM(CONCAT(T1.Descrip, ' ', T1.Descrip2, ' ', T1.Descrip3))) AS DescripcionCompleta,
+                       T1.Descrip, T1.Unidad, CAST(T1.Tara AS FLOAT) AS Tara, CAST(ISNULL(T1.CostAct, 0) AS FLOAT) AS CostAct,
+                       CAST(ISNULL(T1.Precio1, 0) AS FLOAT) AS Precio1, T2.CodInst, T2.Descrip AS Instancia,
+                       CAST(T1.Existen AS FLOAT) AS ExistenciaERPReferencial
+                FROM SAPROD T1 INNER JOIN SAINSTA T2 ON T1.CodInst = T2.CodInst
+                {$where} ORDER BY T2.Descrip ASC, T1.Descrip ASC OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY";
 
         $stmt = $pdo->prepare($sql);
-        foreach ($params as $k => $v) {
-            $stmt->bindValue($k, $v, PDO::PARAM_STR);
-        }
+        foreach ($params as $k => $v) { $stmt->bindValue($k, $v, PDO::PARAM_STR); }
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
         $stmt->execute();
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return ['items' => $items, 'total' => $total, 'page' => $page, 'per_page' => $perPage, 'has_more' => ($offset + count($items)) < $total];
+    }
+
+    /**
+     * Obtiene un producto individual de SAPROD por su código.
+     * @return array<string, mixed>|null
+     */
+    public static function getProductByCod(string $codProd): ?array
+    {
+        $pdo = Database::getConnection();
+        $sql = "SELECT T1.CodProd, LTRIM(RTRIM(CONCAT(T1.Descrip, ' ', T1.Descrip2, ' ', T1.Descrip3))) AS DescripcionCompleta,
+                       T1.Descrip, T1.Unidad, CAST(T1.Tara AS FLOAT) AS Tara, CAST(ISNULL(T1.CostAct, 0) AS FLOAT) AS CostAct,
+                       CAST(ISNULL(T1.Precio1, 0) AS FLOAT) AS Precio1, T2.CodInst, T2.Descrip AS Instancia
+                FROM SAPROD T1 LEFT JOIN SAINSTA T2 ON T1.CodInst = T2.CodInst WHERE T1.CodProd = :cod";
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':cod', trim($codProd), PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 
     /**

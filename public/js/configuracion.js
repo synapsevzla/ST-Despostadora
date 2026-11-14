@@ -52,44 +52,15 @@ async function guardarCorrelativo(e, form) {
     }
 }
 
-let productosDisponiblesCache = [];
-
-async function cargarProductosEspecie() {
-    const inst = byId('filtro_instancia')?.value || '';
-    try {
-        const res = await fetch('/api/config/productos?codinst=' + encodeURIComponent(inst));
-        const data = await res.json();
-        if (!data.success) return;
-        productosDisponiblesCache = data.products || [];
-
-        const selCanal = byId('sel_codprod');
-        const selMerma = byId('sel_codprod_merma');
-        if (!selCanal || !selMerma) return;
-
-        const curCanal = selCanal.value;
-        const curMerma = selMerma.value;
-
-        selCanal.innerHTML = '<option value="">-- Seleccione Producto Canal --</option>';
-        selMerma.innerHTML = '<option value="">-- Seleccione Producto Merma --</option>';
-
-        productosDisponiblesCache.forEach(p => {
-            const desc = `[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad})`;
-            selCanal.add(new Option(`${desc} - Costo: $${Number(p.CostAct).toFixed(2)}`, p.CodProd));
-            selMerma.add(new Option(desc, p.CodProd));
-        });
-
-        if (curCanal) selCanal.value = curCanal;
-        if (curMerma) selMerma.value = curMerma;
-    } catch (err) {
-        console.error('Error cargando productos:', err);
-    }
-}
-
 function limpiarFormEspecie() {
     const form = byId('formEspecie');
     if (form) form.reset();
     if (byId('esp_codprod_hidden')) byId('esp_codprod_hidden').value = '';
-    if (byId('sel_codprod')) byId('sel_codprod').disabled = false;
+    if (window.ProductoPicker) {
+        window.ProductoPicker.limpiar('canal');
+        window.ProductoPicker.limpiar('merma');
+        window.ProductoPicker.bloquear('canal', false);
+    }
     if (byId('tituloFormEspecie')) byId('tituloFormEspecie').textContent = 'Configurar Especie / Canal de Entrada';
     if (byId('btnGuardarEspecie')) byId('btnGuardarEspecie').textContent = 'Guardar Especie';
     if (byId('btnCancelarEdicionEspecie')) byId('btnCancelarEdicionEspecie').style.display = 'none';
@@ -100,33 +71,17 @@ function limpiarFormEspecie() {
     if (byId('esp_activo')) byId('esp_activo').value = '1';
 }
 
-function editarEspecie(codProd, nombre, merma, margen, refrig, congel, activo) {
-    const filtro = byId('filtro_instancia');
-    if (filtro && filtro.value !== '') {
-        filtro.value = '';
-        cargarProductosEspecie().then(() => aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, congel, activo));
-    } else {
-        aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, congel, activo);
-    }
+function editarEspecie(codProd, nombre, merma, nombreMerma, margen, refrig, congel, activo) {
+    aplicarDatosEdicionEspecie(codProd, nombre, merma, nombreMerma, margen, refrig, congel, activo);
 }
 
-function aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, congel, activo) {
-    const selCanal = byId('sel_codprod');
-    const selMerma = byId('sel_codprod_merma');
+function aplicarDatosEdicionEspecie(codProd, nombre, merma, nombreMerma, margen, refrig, congel, activo) {
     if (byId('esp_codprod_hidden')) byId('esp_codprod_hidden').value = codProd;
 
-    if (selCanal) {
-        if (!Array.from(selCanal.options).some(o => o.value === codProd)) {
-            selCanal.add(new Option(`[${codProd}] ${nombre}`, codProd, true, true));
-        }
-        selCanal.value = codProd;
-        selCanal.disabled = true;
-    }
-    if (selMerma) {
-        if (!Array.from(selMerma.options).some(o => o.value === merma) && merma) {
-            selMerma.add(new Option(`[${merma}] (Merma Asignada)`, merma, true, true));
-        }
-        selMerma.value = merma;
+    if (window.ProductoPicker) {
+        window.ProductoPicker.setSeleccionado('canal', { codprod: codProd, nombre: nombre });
+        window.ProductoPicker.bloquear('canal', true);
+        window.ProductoPicker.setSeleccionado('merma', { codprod: merma, nombre: nombreMerma || merma });
     }
 
     if (byId('esp_margen')) byId('esp_margen').value = Number(margen).toFixed(4);
@@ -145,11 +100,18 @@ function aplicarDatosEdicionEspecie(codProd, nombre, merma, margen, refrig, cong
 async function guardarEspecie(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const selCanal = byId('sel_codprod');
-    const hiddenCod = byId('esp_codprod_hidden');
-    if (selCanal && selCanal.disabled && hiddenCod && hiddenCod.value) {
-        formData.set('codprod', hiddenCod.value);
+    const codCanal = byId('esp_codprod_hidden')?.value || byId('sel_codprod')?.value || '';
+    if (!codCanal) {
+        alert('Por favor seleccione el Producto Canal.');
+        return;
     }
+    const codMerma = byId('sel_codprod_merma')?.value || '';
+    if (!codMerma) {
+        alert('Por favor seleccione el Producto para Merma / Desperdicio.');
+        return;
+    }
+    formData.set('codprod', codCanal);
+    formData.set('codprod_merma', codMerma);
 
     try {
         const res = await fetch('/api/config/especie', { method: 'POST', body: formData });
@@ -225,7 +187,7 @@ async function cargarListaCortes(codCanal) {
 
 let currentModalCanal = '';
 
-async function abrirModalAgregarCorte(codCanal, nombreCanal) {
+function abrirModalAgregarCorte(codCanal, nombreCanal) {
     currentModalCanal = codCanal;
     byId('formAgregarCorte')?.reset();
     if (byId('modal_canal_cod')) byId('modal_canal_cod').value = codCanal;
@@ -235,12 +197,10 @@ async function abrirModalAgregarCorte(codCanal, nombreCanal) {
     if (byId('grupo_modal_sel_corte')) byId('grupo_modal_sel_corte').style.display = 'block';
     if (byId('grupo_modal_corte_estatico')) byId('grupo_modal_corte_estatico').style.display = 'none';
 
-    const selCorte = byId('modal_sel_corte');
-    if (selCorte) {
-        selCorte.required = true;
-        selCorte.disabled = false;
-        selCorte.innerHTML = '<option value="">-- Cargando productos disponibles --</option>';
+    if (window.ProductoPicker) {
+        window.ProductoPicker.limpiar('corte');
     }
+
     if (byId('btnSubmitModalCorte')) byId('btnSubmitModalCorte').textContent = 'Vincular Corte';
     if (byId('modal_corte_rendimiento')) byId('modal_corte_rendimiento').value = '0.0000';
     if (byId('modal_corte_margen')) byId('modal_corte_margen').value = '30.0000';
@@ -248,21 +208,6 @@ async function abrirModalAgregarCorte(codCanal, nombreCanal) {
 
     const modal = byId('modalCorte');
     if (modal) { modal.style.display = 'flex'; modal.classList.add('active'); }
-
-    try {
-        const res = await fetch('/api/config/productos');
-        const data = await res.json();
-        if (data.success && selCorte) {
-            selCorte.innerHTML = '<option value="">-- Seleccione Corte a Asociar --</option>';
-            data.products.forEach(p => {
-                if (p.CodProd !== codCanal) {
-                    selCorte.add(new Option(`[${p.CodProd}] ${p.DescripcionCompleta} (${p.Unidad}) - Costo: $${Number(p.CostAct).toFixed(2)}`, p.CodProd));
-                }
-            });
-        }
-    } catch {
-        if (selCorte) selCorte.innerHTML = '<option value="">Error cargando cortes</option>';
-    }
 }
 
 function abrirModalEditarCorte(codCanal, codCorte, nombreCorte, rend, margen, dias) {
@@ -273,9 +218,6 @@ function abrirModalEditarCorte(codCanal, codCorte, nombreCorte, rend, margen, di
     if (byId('modal_corte_hidden')) byId('modal_corte_hidden').value = codCorte;
 
     if (byId('grupo_modal_sel_corte')) byId('grupo_modal_sel_corte').style.display = 'none';
-    const selCorte = byId('modal_sel_corte');
-    if (selCorte) { selCorte.required = false; selCorte.disabled = true; }
-
     if (byId('grupo_modal_corte_estatico')) byId('grupo_modal_corte_estatico').style.display = 'block';
     if (byId('modal_corte_nombre_estatico')) byId('modal_corte_nombre_estatico').value = `[${codCorte}] ${nombreCorte}`;
 
@@ -296,8 +238,12 @@ function cerrarModalCorte() {
 async function guardarNuevoCorte(e) {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const hiddenCorte = byId('modal_corte_hidden');
-    if (hiddenCorte && hiddenCorte.value) formData.set('corte', hiddenCorte.value);
+    const hiddenCorte = byId('modal_corte_hidden')?.value || byId('modal_sel_corte')?.value || '';
+    if (!hiddenCorte) {
+        alert('Por favor seleccione un Corte a asociar.');
+        return;
+    }
+    formData.set('corte', hiddenCorte);
 
     try {
         const res = await fetch('/api/config/cortes/agregar', { method: 'POST', body: formData });
@@ -458,18 +404,66 @@ async function eliminarMesa(id, nombre) {
 // Inicialización de Event Listeners (100% CSP compliant)
 // -------------------------------------------------------------
 document.addEventListener('DOMContentLoaded', () => {
-    cargarProductosEspecie();
-
     document.addEventListener('click', (e) => {
         const tabBtn = e.target.closest('.tab-btn[data-tab]');
         if (tabBtn) { switchConfigTab(tabBtn.dataset.tab, tabBtn); return; }
 
         if (e.target.closest('[data-action="cerrar-modal-corte"]')) { cerrarModalCorte(); return; }
 
+        // Pickers de productos para Canal, Merma y Cortes
+        const pickerCanal = e.target.closest('#picker_canal');
+        if (pickerCanal) {
+            if (e.target.closest('#btn_clear_canal')) {
+                if (window.ProductoPicker) window.ProductoPicker.limpiar('canal');
+                return;
+            }
+            if (!pickerCanal.classList.contains('disabled') && window.ProductoPicker) {
+                window.ProductoPicker.abrir({
+                    title: 'Seleccionar Producto Canal',
+                    subtitle: 'Elija la materia prima / canal de entrada para desposte',
+                    onSelect: (prod) => window.ProductoPicker.setSeleccionado('canal', prod)
+                });
+            }
+            return;
+        }
+
+        const pickerMerma = e.target.closest('#picker_merma');
+        if (pickerMerma) {
+            if (e.target.closest('#btn_clear_merma')) {
+                if (window.ProductoPicker) window.ProductoPicker.limpiar('merma');
+                return;
+            }
+            if (window.ProductoPicker) {
+                window.ProductoPicker.abrir({
+                    title: 'Seleccionar Producto para Merma / Desperdicio',
+                    subtitle: 'Elija el producto de inventario donde se computará la merma',
+                    onSelect: (prod) => window.ProductoPicker.setSeleccionado('merma', prod)
+                });
+            }
+            return;
+        }
+
+        const pickerCorte = e.target.closest('#picker_corte');
+        if (pickerCorte) {
+            if (e.target.closest('#btn_clear_corte')) {
+                if (window.ProductoPicker) window.ProductoPicker.limpiar('corte');
+                return;
+            }
+            if (window.ProductoPicker) {
+                window.ProductoPicker.abrir({
+                    title: 'Seleccionar Corte a Asociar',
+                    subtitle: `Elija el producto cárnico para la especie [${currentModalCanal}]`,
+                    excludeCodProd: currentModalCanal,
+                    onSelect: (prod) => window.ProductoPicker.setSeleccionado('corte', prod)
+                });
+            }
+            return;
+        }
+
         const btnEditarEsp = e.target.closest('.btn-editar-especie');
         if (btnEditarEsp) {
             const d = btnEditarEsp.dataset;
-            editarEspecie(d.codprod, d.nombre, d.merma, d.margen, d.refrig, d.congel, d.activo);
+            editarEspecie(d.codprod, d.nombre, d.merma, d.nombreMerma, d.margen, d.refrig, d.congel, d.activo);
             return;
         }
 
@@ -534,6 +528,4 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.form-correlativo').forEach(f => {
         f.addEventListener('submit', (e) => guardarCorrelativo(e, f));
     });
-
-    byId('filtro_instancia')?.addEventListener('change', cargarProductosEspecie);
 });

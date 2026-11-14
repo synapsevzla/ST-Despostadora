@@ -114,7 +114,7 @@ final class ConfigController
     }
 
     /**
-     * Endpoint API para buscar productos elegibles de SAPROD.
+     * Endpoint API para buscar productos elegibles de SAPROD con paginación lazy load (lotes de 50).
      */
     public static function searchProducts(): void
     {
@@ -122,10 +122,35 @@ final class ConfigController
         header('Content-Type: application/json; charset=UTF-8');
 
         try {
-            $q = (string)($_GET['q'] ?? '');
-            $codInst = (string)($_GET['codinst'] ?? '');
-            $products = ConfigService::getEligibleProducts($q !== '' ? $q : null, $codInst !== '' ? $codInst : null);
-            echo json_encode(['success' => true, 'products' => $products]);
+            $singleCod = trim((string)($_GET['codprod'] ?? ''));
+            if ($singleCod !== '') {
+                $prod = ConfigService::getProductByCod($singleCod);
+                echo json_encode(['success' => true, 'product' => $prod]);
+                return;
+            }
+
+            $q = trim((string)($_GET['q'] ?? ''));
+            $codInst = trim((string)($_GET['codinst'] ?? ''));
+            $page = max(1, (int)($_GET['page'] ?? 1));
+            $limit = max(1, min(100, (int)($_GET['limit'] ?? 50)));
+            $exclude = trim((string)($_GET['exclude'] ?? ''));
+
+            $result = ConfigService::getEligibleProducts(
+                $q !== '' ? $q : null,
+                $codInst !== '' ? $codInst : null,
+                $page,
+                $limit,
+                $exclude !== '' ? $exclude : null
+            );
+
+            echo json_encode([
+                'success' => true,
+                'products' => $result['items'],
+                'total' => $result['total'],
+                'page' => $result['page'],
+                'limit' => $result['per_page'],
+                'has_more' => $result['has_more']
+            ]);
         } catch (Throwable $e) {
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }

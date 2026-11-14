@@ -176,29 +176,49 @@ ob_start();
                     <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token) ?>">
                     <input type="hidden" name="codprod_hidden" id="esp_codprod_hidden" value="">
 
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Filtrar Instancia ERP</label>
-                            <select id="filtro_instancia" class="form-input">
-                                <option value="">-- Todas las Instancias --</option>
-                                <?php foreach ($instances as $inst): ?>
-                                    <option value="<?= Security::escape($inst['CodInst']) ?>"><?= Security::escape($inst['Descrip']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <label class="form-label">Producto Canal *</label>
+                            <input type="hidden" name="codprod" id="sel_codprod" value="">
+                            <div class="producto-picker-trigger" id="picker_canal" data-tipo="canal" title="Haga clic para buscar y seleccionar Producto Canal">
+                                <div class="picker-placeholder" id="display_canal_placeholder">
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <span>-- Haga clic para buscar Producto Canal --</span>
+                                </div>
+                                <div class="picker-selected-wrap" id="display_canal_selected" style="display: none;">
+                                    <div class="picker-selected-info">
+                                        <span class="picker-badge-cod" id="display_canal_cod"></span>
+                                        <span class="picker-name" id="display_canal_nombre"></span>
+                                        <span class="picker-extra" id="display_canal_extra"></span>
+                                    </div>
+                                    <div class="picker-actions">
+                                        <button type="button" class="picker-btn-cambiar" id="btn_cambiar_canal">Cambiar</button>
+                                        <button type="button" class="picker-btn-clear" id="btn_clear_canal" title="Quitar selección">&times;</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Producto Canal</label>
-                            <select name="codprod" id="sel_codprod" class="form-input" required>
-                                <option value="">-- Seleccione Producto Canal --</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label">Producto para Merma / Desperdicio</label>
-                            <select name="codprod_merma" id="sel_codprod_merma" class="form-input" required>
-                                <option value="">-- Seleccione Producto Merma --</option>
-                            </select>
+                            <label class="form-label">Producto para Merma / Desperdicio *</label>
+                            <input type="hidden" name="codprod_merma" id="sel_codprod_merma" value="">
+                            <div class="producto-picker-trigger" id="picker_merma" data-tipo="merma" title="Haga clic para buscar y seleccionar Producto Merma">
+                                <div class="picker-placeholder" id="display_merma_placeholder">
+                                    <svg class="icon" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <span>-- Haga clic para buscar Producto Merma --</span>
+                                </div>
+                                <div class="picker-selected-wrap" id="display_merma_selected" style="display: none;">
+                                    <div class="picker-selected-info">
+                                        <span class="picker-badge-cod" id="display_merma_cod"></span>
+                                        <span class="picker-name" id="display_merma_nombre"></span>
+                                        <span class="picker-extra" id="display_merma_extra"></span>
+                                    </div>
+                                    <div class="picker-actions">
+                                        <button type="button" class="picker-btn-cambiar" id="btn_cambiar_merma">Cambiar</button>
+                                        <button type="button" class="picker-btn-clear" id="btn_clear_merma" title="Quitar selección">&times;</button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -270,6 +290,7 @@ ob_start();
                                                 data-codprod="<?= Security::escape($esp['CodProd']) ?>"
                                                 data-nombre="<?= Security::escape($esp['NombreEspecie']) ?>"
                                                 data-merma="<?= Security::escape($esp['CodProdMerma']) ?>"
+                                                data-nombre-merma="<?= Security::escape($esp['NombreMerma'] ?: '') ?>"
                                                 data-margen="<?= (float)$esp['MargenUtilidadDefault'] ?>"
                                                 data-refrig="<?= (int)$esp['DiasVencimientoRefrig'] ?>"
                                                 data-congel="<?= (int)$esp['DiasVencimientoCongel'] ?>"
@@ -442,10 +463,25 @@ ob_start();
             </div>
 
             <div class="form-group" id="grupo_modal_sel_corte">
-                <label class="form-label">Seleccionar Corte</label>
-                <select name="corte" id="modal_sel_corte" class="form-input" required>
-                    <option value="">-- Cargando cortes disponibles --</option>
-                </select>
+                <label class="form-label">Seleccionar Corte a Asociar *</label>
+                <input type="hidden" name="corte" id="modal_sel_corte" value="">
+                <div class="producto-picker-trigger" id="picker_corte" data-tipo="corte" title="Haga clic para buscar y seleccionar Corte">
+                    <div class="picker-placeholder" id="display_corte_placeholder">
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 18px; height: 18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <span>-- Haga clic para buscar Corte a Asociar --</span>
+                    </div>
+                    <div class="picker-selected-wrap" id="display_corte_selected" style="display: none;">
+                        <div class="picker-selected-info">
+                            <span class="picker-badge-cod" id="display_corte_cod"></span>
+                            <span class="picker-name" id="display_corte_nombre"></span>
+                            <span class="picker-extra" id="display_corte_extra"></span>
+                        </div>
+                        <div class="picker-actions">
+                            <button type="button" class="picker-btn-cambiar" id="btn_cambiar_corte">Cambiar</button>
+                            <button type="button" class="picker-btn-clear" id="btn_clear_corte" title="Quitar selección">&times;</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="form-group" id="grupo_modal_corte_estatico" style="display: none;">
@@ -481,6 +517,9 @@ ob_start();
     </div>
 </div>
 
+<link rel="stylesheet" href="/css/producto-picker.css">
+<?php require __DIR__ . '/partials/modal_busqueda_producto.php'; ?>
+<script src="/js/producto_picker.js"></script>
 <script src="/js/configuracion.js"></script>
 
 <style>

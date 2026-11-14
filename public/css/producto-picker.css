@@ -1,0 +1,296 @@
+/* ST-Despostadora - Estilos para Selector y Modal de Búsqueda Avanzada de Productos */
+
+.producto-picker-trigger {
+    background-color: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.65rem 0.85rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    user-select: none;
+    width: 100%;
+}
+
+.producto-picker-trigger:hover:not(.disabled) {
+    border-color: var(--primary);
+    background-color: #3e302a;
+}
+
+.producto-picker-trigger.disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    background-color: rgba(0, 0, 0, 0.15);
+}
+
+.picker-placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    width: 100%;
+}
+
+.picker-placeholder svg {
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.picker-selected-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 0.5rem;
+}
+
+.picker-selected-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.picker-badge-cod {
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--primary);
+    background: rgba(244, 107, 58, 0.15);
+    padding: 0.2rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    border: 1px solid rgba(244, 107, 58, 0.3);
+    white-space: nowrap;
+}
+
+.picker-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 320px;
+}
+
+.picker-extra {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.picker-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+}
+
+.picker-btn-cambiar {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.picker-btn-cambiar:hover {
+    color: var(--text-primary);
+    border-color: var(--primary);
+}
+
+.picker-btn-clear {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.picker-btn-clear:hover {
+    color: var(--danger);
+    background: rgba(238, 103, 55, 0.15);
+}
+
+/* Modal de Búsqueda Avanzada */
+.modal-busqueda-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(20, 15, 12, 0.8);
+    backdrop-filter: blur(4px);
+    z-index: 1050;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-busqueda-overlay.active {
+    display: flex;
+}
+
+.modal-busqueda-card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 760px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.modal-busqueda-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-sidebar);
+}
+
+.modal-busqueda-header h4 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+}
+
+.modal-busqueda-header p {
+    margin: 0.2rem 0 0 0;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.modal-busqueda-filtros {
+    padding: 1rem 1.25rem;
+    background-color: var(--bg-main);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.modal-busqueda-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 0.75rem;
+}
+
+@media (max-width: 640px) {
+    .modal-busqueda-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.modal-busqueda-info-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.modal-busqueda-resultados {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 280px;
+    max-height: calc(90vh - 250px);
+    padding: 0.85rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.producto-item-card {
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+}
+
+.producto-item-card:hover {
+    background-color: #46362f;
+    border-color: var(--primary);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.producto-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.producto-item-cod {
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--primary);
+    font-size: 0.85rem;
+    background: rgba(244, 107, 58, 0.12);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid rgba(244, 107, 58, 0.25);
+}
+
+.producto-item-instancia {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+}
+
+.producto-item-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0.15rem 0;
+}
+
+.producto-item-bottom {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.producto-item-sel-action {
+    margin-left: auto;
+    color: var(--primary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.modal-busqueda-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid var(--border-color);
+    background-color: var(--bg-sidebar);
+}
