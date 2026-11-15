@@ -46,12 +46,12 @@ XAMPP en Windows no incluye `pdo_sqlsrv` de forma predeterminada.
    DB_DRIVER=sqlsrv
    DB_HOST=127.0.0.1
    DB_PORT=1433
-   DB_DATABASE=EnterpriseAdminDBPruebastrigger
-   DB_USERNAME=sa
-   DB_PASSWORD=SuClaveSQLSegura
-   DB_ENCRYPT=false
-   DB_TRUST_SERVER_CERT=true
+   DB_NAME=EnterpriseAdminDBPruebastrigger
+   DB_USER=sa
+   DB_PASS=SuClaveSQLSegura
+   DB_TIMEOUT=15
    ```
+   *(Nota: El serial de licencia se toma automáticamente de la tabla `saconf` del ERP. No es necesario ni se utiliza la clave `APP_LICENSE` en `.env`)*
 
 ### Paso 4: Diagnóstico y Validación
 1. Abra su navegador web y visite el script de diagnóstico:

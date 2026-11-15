@@ -95,6 +95,9 @@ $checks[] = [
 // 6. Prueba de Conexión a Base de Datos SQL Server
 $dbConnected = false;
 $dbMessage = 'No evaluada (se requiere .env y pdo_sqlsrv)';
+$saconfSerial = '';
+$saconfDescrip = '';
+
 if ($envExists && $hasSqlsrv) {
     try {
         $dbFile = __DIR__ . '/config/database.php';
@@ -109,6 +112,20 @@ if ($envExists && $hasSqlsrv) {
             $rawVer = (string)($row['ver'] ?? '');
             $shortVer = preg_match('/Microsoft SQL Server \d{4}/', $rawVer, $m) ? $m[0] : 'Microsoft SQL Server';
             $dbMessage = "Conexión exitosa a {$shortVer} | Base de datos: '{$dbName}'";
+
+            // Consultar serial y razón social desde saconf
+            try {
+                $stmtSaconf = $pdo->query("SELECT TOP 1 NroSerial, Descrip FROM saconf ORDER BY CASE WHEN CodSucu = '00000' THEN 0 ELSE 1 END");
+                if ($stmtSaconf) {
+                    $rowSaconf = $stmtSaconf->fetch(\PDO::FETCH_ASSOC);
+                    if (is_array($rowSaconf)) {
+                        $saconfSerial = trim((string)($rowSaconf['NroSerial'] ?? ''));
+                        $saconfDescrip = trim((string)($rowSaconf['Descrip'] ?? ''));
+                    }
+                }
+            } catch (\Throwable) {
+                $saconfSerial = '';
+            }
         } else {
             $dbMessage = 'No se encontró config/database.php';
         }
@@ -121,8 +138,19 @@ if ($envExists && $hasSqlsrv) {
         'name' => 'Conexión a Microsoft SQL Server',
         'status' => $dbConnected,
         'detail' => $dbMessage,
-        'critical' => false
+        'critical' => true
     ];
+
+    if ($dbConnected) {
+        $checks[] = [
+            'name' => 'Serial Saint ERP en SACONF (Licenciamiento)',
+            'status' => ($saconfSerial !== ''),
+            'detail' => ($saconfSerial !== '')
+                ? "Serial: {$saconfSerial} | Empresa: {$saconfDescrip}"
+                : "No se encontró el serial en la tabla saconf. Verifique la base de datos de Saint ERP.",
+            'critical' => true
+        ];
+    }
 }
 
 // 7. Permisos de Escritura para Caché Local

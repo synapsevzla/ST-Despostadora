@@ -27,6 +27,9 @@ Options +FollowSymLinks
     RewriteRule ^(config|database|src|views|scratch|electron|yakpro-po)(\/|$) - [F,L,NC]
     RewriteRule ^\.env - [F,L,NC]
 
+    # Permitir ejecución directa del diagnóstico de entorno
+    RewriteRule ^check_env\.php$ - [L]
+
     # Reenviar peticiones que no ingresen por public/ hacia public/
     RewriteCond %{REQUEST_URI} !^.*/public/ [NC]
     RewriteRule ^(.*)$ public/$1 [L,QSA]

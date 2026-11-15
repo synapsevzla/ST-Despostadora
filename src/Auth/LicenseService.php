@@ -242,11 +242,7 @@ final class LicenseService
 
     public static function getLocalSerial(): string
     {
-        $envSerial = Database::getEnv('APP_LICENSE', '');
-        if (trim($envSerial) !== '') {
-            return trim($envSerial);
-        }
-
+        // La autoridad única del licenciamiento es el serial oficial de Saint ERP en saconf
         return self::getSaconfSerial();
     }
 
@@ -386,6 +382,13 @@ final class LicenseService
     private static function fetchFromCloud(string $serial): array
     {
         $endpoint = self::RTDB_BASE_URL . '/' . self::RTDB_COLLECTION . '/' . rawurlencode(trim($serial)) . '.json';
+
+        // Si la extensión cURL no está cargada en el servidor (ej. dependencias DLL faltantes en XAMPP Apache),
+        // utilizar fallback nativo mediante streams HTTPS de PHP
+        if (!function_exists('curl_init')) {
+            return self::fetchViaStream($endpoint);
+        }
+
         $caPath = self::getCaBundlePath();
 
         $ch = curl_init();
@@ -436,6 +439,77 @@ final class LicenseService
         if ($body === false || $err !== '') {
             error_log('[FIREBASE RTDB CURL ERROR] ' . $err);
             return ['http_code' => 0, 'data' => null, 'error' => $err ?: 'Error de conexión con Firebase'];
+        }
+
+        return ['http_code' => $httpCode, 'data' => json_decode((string)$body, true), 'error' => null];
+    }
+
+    /**
+     * Fallback de consulta HTTPS mediante streams nativos de PHP (fopen wrappers)
+     * Opera independientemente de que la extensión cURL esté instalada o no.
+     *
+     * @return array{http_code: int, data: mixed, error: ?string}
+     */
+    private static function fetchViaStream(string $endpoint): array
+    {
+        $caPath = self::getCaBundlePath();
+        $sslOpts = [
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+            'allow_self_signed' => false,
+        ];
+        if ($caPath !== null && is_file($caPath)) {
+            $sslOpts['cafile'] = $caPath;
+        }
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'header' => "Accept: application/json\r\nUser-Agent: ST-Despostadora-Saint/1.0\r\n",
+                'timeout' => self::TIMEOUT_SECONDS,
+                'ignore_errors' => true,
+            ],
+            'ssl' => $sslOpts,
+        ]);
+
+        $body = @file_get_contents($endpoint, false, $context);
+        $httpCode = 0;
+
+        if (isset($http_response_header) && is_array($http_response_header)) {
+            foreach ($http_response_header as $hdr) {
+                if (preg_match('/^HTTP\/\S+\s+(\d{3})/', $hdr, $m)) {
+                    $httpCode = (int)$m[1];
+                }
+            }
+        }
+
+        // Si falló por verificación SSL (antivirus o almacén desactualizado en Windows), reintentar
+        if ($body === false || $httpCode === 0) {
+            $fallbackContext = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'header' => "Accept: application/json\r\nUser-Agent: ST-Despostadora-Saint/1.0\r\n",
+                    'timeout' => self::TIMEOUT_SECONDS,
+                    'ignore_errors' => true,
+                ],
+                'ssl' => [
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                ],
+            ]);
+            $body = @file_get_contents($endpoint, false, $fallbackContext);
+            if (isset($http_response_header) && is_array($http_response_header)) {
+                foreach ($http_response_header as $hdr) {
+                    if (preg_match('/^HTTP\/\S+\s+(\d{3})/', $hdr, $m)) {
+                        $httpCode = (int)$m[1];
+                    }
+                }
+            }
+        }
+
+        if ($body === false) {
+            error_log('[FIREBASE RTDB STREAM ERROR] Falló la comunicación con Firebase vía HTTPS stream');
+            return ['http_code' => 0, 'data' => null, 'error' => 'No se pudo comunicar con Firebase'];
         }
 
         return ['http_code' => $httpCode, 'data' => json_decode((string)$body, true), 'error' => null];

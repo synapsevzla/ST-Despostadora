@@ -72,9 +72,9 @@ final class Database
 
         $host = self::getEnv('DB_HOST', '127.0.0.1');
         $port = self::getEnv('DB_PORT', '1433');
-        $dbname = self::getEnv('DB_NAME', '');
-        $user = self::getEnv('DB_USER', '');
-        $pass = self::getEnv('DB_PASS', '');
+        $dbname = self::getEnv('DB_NAME', '') ?: self::getEnv('DB_DATABASE', '');
+        $user = self::getEnv('DB_USER', '') ?: self::getEnv('DB_USERNAME', '');
+        $pass = self::getEnv('DB_PASS', '') ?: self::getEnv('DB_PASSWORD', '');
         $driver = self::getEnv('DB_DRIVER', 'sqlsrv');
         $timeout = self::getEnv('DB_TIMEOUT', '4');
 

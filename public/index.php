@@ -100,6 +100,23 @@ if ($baseDir !== '' && str_starts_with($rawUri, $baseDir)) {
 $requestUri = ($rawUri !== '/' && str_ends_with($rawUri, '/')) ? rtrim($rawUri, '/') : $rawUri;
 $requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
+// Comprobación de conectividad con Microsoft SQL Server
+try {
+    Database::getConnection();
+} catch (\Throwable $e) {
+    if (Database::isConnectionError($e)) {
+        $isApi = str_starts_with($requestUri, '/api/')
+            || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+        if ($isApi) {
+            Database::handleApiError($e);
+        } else {
+            Database::renderErrorView($e->getMessage());
+        }
+    }
+}
+
 // Comprobación de estado y vigencia de Licencia
 $licenseInfo = LicenseService::check();
 

@@ -111,6 +111,9 @@ Options +FollowSymLinks
     RewriteRule ^(config|database|src|views|scratch|electron|yakpro-po)(\/|$) - [F,L,NC]
     RewriteRule ^\.env - [F,L,NC]
 
+    # Permitir ejecución directa del diagnóstico de entorno
+    RewriteRule ^check_env\.php$ - [L]
+
     # Reenviar peticiones que no ingresen por public/ hacia public/
     RewriteCond %{REQUEST_URI} !^.*/public/ [NC]
     RewriteRule ^(.*)$ public/$1 [L,QSA]
@@ -186,9 +189,12 @@ EOF
 # 8. Sincronizar utilidades, plantillas de configuración y documentación
 info "Incorporando herramientas de diagnóstico, plantilla VirtualHost y manuales..."
 
-# Diagnóstico de entorno (check_env.php)
+# Diagnóstico de entorno (check_env.php en raíz y public/)
 if [[ -f "${PROJECT_ROOT}/check_env.php" ]]; then
     cp -f "${PROJECT_ROOT}/check_env.php" "${DIST_XAMPP_DIR}/check_env.php"
+fi
+if [[ -f "${PROJECT_ROOT}/public/check_env.php" ]]; then
+    cp -f "${PROJECT_ROOT}/public/check_env.php" "${DIST_XAMPP_DIR}/public/check_env.php"
 fi
 
 # Plantilla de VirtualHost
@@ -214,7 +220,7 @@ SOLUCIONES TOTALES DESPOSTADORA - GUIA DE INSTALACION RAPIDA XAMPP / HOSTING
 * Controladores PHP para SQL Server habilitados:
   - Windows: php_pdo_sqlsrv_XX_ts_x64.dll y php_sqlsrv_XX_ts_x64.dll
   - Linux  : pdo_sqlsrv (o sqlsrv / pdo_dblib)
-* Extensiones PHP requeridas: curl, openssl, mbstring, fileinfo, json, pdo.
+* Extensiones PHP requeridas: curl (o HTTPS streams), openssl, mbstring, fileinfo, json, pdo.
 * Apache con mod_rewrite y mod_headers activos.
 
 2. INSTALACION EN XAMPP (WINDOWS):
@@ -226,11 +232,13 @@ b) Copie '.env.example' como '.env' y configure las credenciales de SQL Server:
    DB_DRIVER=sqlsrv
    DB_HOST=127.0.0.1
    DB_PORT=1433
-   DB_DATABASE=EnterpriseAdminDB
-   DB_USERNAME=sa
-   DB_PASSWORD=SuClaveSQL
-   DB_ENCRYPT=false
-   DB_TRUST_SERVER_CERT=true
+   DB_NAME=EnterpriseAdminDB
+   DB_USER=sa
+   DB_PASS=SuClaveSQL
+   DB_TIMEOUT=15
+
+   (Nota: El serial de licenciamiento se lee automáticamente de la tabla saconf
+    de Saint ERP. NO es necesario ni se requiere configurar APP_LICENSE en .env)
 
 c) Verifique que su php.ini (C:\xampp\php\php.ini) tenga activos los controladores SQL:
    extension=php_pdo_sqlsrv
