@@ -1,9 +1,12 @@
 /**
- * ST-Despostadora - Lógica de Apertura de Nueva Orden de Desposte (Página Completa)
+ * ST-Despostadora - Lógica de Apertura de Nueva Orden de Desposte
  * Vanilla ES6+, 100% compliant con Content-Security-Policy (sin inline handlers).
+ * Controlador de Formulario, Teclado Táctil, Borrador Local y Persistencia.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+    'use strict';
+
     // Feedback sonoro nativo con Web Audio API
     const audioCtx = (typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined')
         ? new (window.AudioContext || window.webkitAudioContext)() : null;
@@ -33,24 +36,32 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) {}
     }
 
+    const byId = id => document.getElementById(id);
     let isSubmitting = false;
-    const alertBox = document.getElementById('desposteAlert');
-    const form = document.getElementById('formNuevaOrdenPagina');
-    const inputMesa = document.getElementById('inputLineaMesa');
-    const inputObs = document.getElementById('inputObservaciones');
-    const selectEspecie = document.getElementById('selectCanalEspecie');
-    const selectRecepcion = document.getElementById('selectRecepcion');
-    const helpRecepcion = document.getElementById('recAvailableHelp');
-    const grpPieza = document.getElementById('grpPiezaIndividual');
-    const selectPieza = document.getElementById('selectPiezaIndividual');
-    const inputPeso = document.getElementById('inputPesoEntrada');
-    const badgePesoDisp = document.getElementById('badgePesoDisp');
-    const btnSubmit = document.getElementById('btnSubmitNuevaOrden');
 
-    // Resúmenes visuales
-    const resMesa = document.getElementById('resumenMesa');
-    const resEspecie = document.getElementById('resumenEspecie');
-    const resRecepcion = document.getElementById('resumenRecepcion');
+    // Elementos del formulario y contenedores
+    const alertBox = byId('desposteAlert');
+    const form = byId('formNuevaOrdenPagina');
+    const inputMesa = byId('inputLineaMesa');
+    const inputObs = byId('inputObservaciones');
+    const inputPeso = byId('inputPesoEntrada');
+    const badgePesoDisp = byId('badgePesoDisp');
+    const btnSubmit = byId('btnSubmitNuevaOrden');
+
+    // Inputs ocultos y contenedores
+    const hiddenEspecie = byId('selectCanalEspecie');
+    const hiddenRecepcion = byId('selectRecepcion');
+    const hiddenPieza = byId('selectPiezaIndividual');
+    const grpPieza = byId('grpPiezaIndividual');
+    const helpRecepcion = byId('recAvailableHelp');
+    const textPlaceholderRecepcion = byId('textPlaceholderRecepcion');
+    const triggerRecepcion = byId('triggerRecepcion');
+    const textPlaceholderPieza = byId('textPlaceholderPieza');
+
+    // Resúmenes visuales en la columna derecha
+    const resMesa = byId('resumenMesa');
+    const resEspecie = byId('resumenEspecie');
+    const resRecepcion = byId('resumenRecepcion');
 
     function showAlert(msg, type = 'danger') {
         if (!alertBox) return;
@@ -64,15 +75,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (alertBox) alertBox.style.display = 'none';
     }
 
-    // Persistencia Local del Borrador (Auto-Save para protección contra F5 o recargas accidentales)
+    // Persistencia Local del Borrador (Auto-Save para protección contra F5)
     function guardarBorrador() {
         if (isSubmitting) return;
         const draft = {
             linea_mesa: inputMesa?.value || '',
             observaciones: inputObs?.value || '',
-            codprod_canal: selectEspecie?.value || '',
-            nro_recepcion: selectRecepcion?.value || '',
-            nro_especie: selectPieza?.value || '',
+            codprod_canal: hiddenEspecie?.value || '',
+            nombre_canal: byId('nameEspecie')?.textContent || '',
+            nro_recepcion: hiddenRecepcion?.value || '',
+            nro_especie: hiddenPieza?.value || '',
             peso_entrada: inputPeso?.value || ''
         };
         const hasData = (draft.codprod_canal !== '') || (draft.nro_recepcion !== '') ||
@@ -84,6 +96,135 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Inicializar el gestor de selectores modales
+    if (window.DespostePicker) {
+        window.DespostePicker.init({
+            playBeep,
+            onEspecieSelected: (codprod, nombre) => {
+                if (resEspecie) resEspecie.textContent = nombre ? `${nombre} (${codprod})` : codprod;
+                if (resRecepcion) resRecepcion.textContent = '-';
+                if (badgePesoDisp) badgePesoDisp.textContent = '';
+                if (inputPeso) inputPeso.value = '';
+                cargarRecepcionesParaCanal(codprod);
+                guardarBorrador();
+            },
+            onRecepcionSelected: async (rec) => {
+                if (resRecepcion) resRecepcion.textContent = rec.NroRecepcion;
+                const dispKg = parseFloat(rec.PesoDisponible || '0');
+                if (badgePesoDisp) badgePesoDisp.textContent = `Disp: ${dispKg.toFixed(4)} kg`;
+                await procesarCambioRecepcion(rec);
+                guardarBorrador();
+            },
+            onPiezaSelected: (pieza) => {
+                const peso = parseFloat(pieza.PesoNeto || '0');
+                if (inputPeso) inputPeso.value = peso.toFixed(4);
+                guardarBorrador();
+            }
+        });
+    }
+
+    // Carga asíncrona de recepciones para la especie seleccionada
+    async function cargarRecepcionesParaCanal(canal, targetRecToRestore = null) {
+        hideAlert();
+        window.DespostePicker.setRecepciones([]);
+        if (helpRecepcion) helpRecepcion.textContent = 'Consultando recepciones disponibles...';
+        if (textPlaceholderRecepcion) textPlaceholderRecepcion.textContent = '-- Consultando inventario... --';
+        if (triggerRecepcion) triggerRecepcion.classList.add('disabled');
+
+        if (!canal) {
+            if (textPlaceholderRecepcion) textPlaceholderRecepcion.textContent = '-- Seleccione primero una especie --';
+            if (helpRecepcion) helpRecepcion.textContent = '';
+            guardarBorrador();
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/desposte/recepciones-disponibles?canal=${encodeURIComponent(canal)}`);
+            const json = await res.json();
+
+            if (json.success && Array.isArray(json.receptions)) {
+                window.DespostePicker.setRecepciones(json.receptions);
+                const recs = json.receptions;
+                if (recs.length > 0) {
+                    if (triggerRecepcion) triggerRecepcion.classList.remove('disabled');
+                    if (textPlaceholderRecepcion) {
+                        textPlaceholderRecepcion.textContent = `-- Toque para seleccionar (${recs.length} disponibles) --`;
+                    }
+                    if (helpRecepcion) {
+                        helpRecepcion.textContent = `${recs.length} recepción(es) con saldo disponible en inventario.`;
+                    }
+
+                    if (targetRecToRestore) {
+                        const encontrada = recs.find(r => r.NroRecepcion === targetRecToRestore);
+                        if (encontrada) {
+                            window.DespostePicker.setRecepcionVisual(encontrada);
+                            if (resRecepcion) resRecepcion.textContent = encontrada.NroRecepcion;
+                            const dispKg = parseFloat(encontrada.PesoDisponible || '0');
+                            if (badgePesoDisp) badgePesoDisp.textContent = `Disp: ${dispKg.toFixed(4)} kg`;
+                            await procesarCambioRecepcion(encontrada);
+                        }
+                    }
+                } else {
+                    if (textPlaceholderRecepcion) textPlaceholderRecepcion.textContent = '-- Sin recepciones disponibles con saldo --';
+                    if (helpRecepcion) {
+                        helpRecepcion.textContent = 'No hay recepciones con saldo disponible para esta especie.';
+                    }
+                }
+            } else {
+                if (textPlaceholderRecepcion) textPlaceholderRecepcion.textContent = '-- Error al cargar recepciones --';
+                showAlert('No se pudieron obtener las recepciones disponibles.', 'danger');
+            }
+        } catch (e) {
+            if (textPlaceholderRecepcion) textPlaceholderRecepcion.textContent = '-- Servidor fuera de línea --';
+            showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
+        }
+        guardarBorrador();
+    }
+
+    async function procesarCambioRecepcion(rec) {
+        hideAlert();
+        window.DespostePicker.setPiezas([]);
+        window.DespostePicker.setPiezaVisual(null);
+        if (inputPeso) inputPeso.value = '';
+
+        if (!rec) {
+            if (grpPieza) grpPieza.style.display = 'none';
+            return;
+        }
+
+        const metodo = rec.MetodoEntrada;
+        const disp = parseFloat(rec.PesoDisponible || '0');
+
+        if (metodo === 'PESO_INDIVIDUAL') {
+            if (grpPieza) grpPieza.style.display = 'block';
+            if (textPlaceholderPieza) textPlaceholderPieza.textContent = '-- Cargando piezas individuales... --';
+
+            try {
+                const res = await fetch(`/api/recepcion/detalle?nrorec=${encodeURIComponent(rec.NroRecepcion)}`);
+                const json = await res.json();
+                if (json.success && Array.isArray(json.details)) {
+                    const disponibles = json.details.filter(d => d.EstadoDesposte === 'DISPONIBLE');
+                    window.DespostePicker.setPiezas(disponibles);
+                    if (disponibles.length > 0) {
+                        if (textPlaceholderPieza) {
+                            textPlaceholderPieza.textContent = `-- Toque para seleccionar res (${disponibles.length} disponibles) --`;
+                        }
+                    } else {
+                        if (textPlaceholderPieza) {
+                            textPlaceholderPieza.textContent = '-- Todas las piezas de esta recepción ya fueron despostadas --';
+                        }
+                    }
+                }
+            } catch (e) {
+                if (textPlaceholderPieza) textPlaceholderPieza.textContent = '-- Error al cargar piezas --';
+            }
+        } else {
+            if (grpPieza) grpPieza.style.display = 'none';
+            if (inputPeso) inputPeso.value = disp.toFixed(4);
+        }
+    }
+
+    // Restauración del borrador o preselección inicial
     async function restaurarBorrador() {
         const raw = sessionStorage.getItem('st_draft_desposte_nueva');
         let draft = null;
@@ -91,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try { draft = JSON.parse(raw); } catch (e) { draft = null; }
         }
 
-        const preselectedSpecies = selectEspecie?.value || '';
+        const preselectedSpecies = hiddenEspecie?.value || '';
         const targetSpecies = (draft && draft.codprod_canal) ? draft.codprod_canal : preselectedSpecies;
 
         if (draft) {
@@ -106,36 +247,43 @@ document.addEventListener('DOMContentLoaded', () => {
             if (draft.observaciones && inputObs) inputObs.value = draft.observaciones;
         }
 
-        if (targetSpecies && selectEspecie) {
-            selectEspecie.value = targetSpecies;
-            await cargarRecepcionesParaCanal(targetSpecies);
-            if (draft && draft.nro_recepcion && selectRecepcion) {
-                selectRecepcion.value = draft.nro_recepcion;
-                await manejarCambioRecepcion();
-                if (draft.nro_especie && selectPieza) {
-                    selectPieza.value = draft.nro_especie;
+        if (targetSpecies) {
+            let nombreEspecieEncontrada = draft?.nombre_canal || '';
+            const listaEspecie = byId('modalEspecieLista');
+            if (!nombreEspecieEncontrada && listaEspecie) {
+                const item = listaEspecie.querySelector(`.especie-modal-item[data-codprod="${targetSpecies}"]`);
+                if (item) nombreEspecieEncontrada = item.dataset.nombre || '';
+            }
+            window.DespostePicker.setEspecieVisual(targetSpecies, nombreEspecieEncontrada);
+            if (resEspecie) resEspecie.textContent = nombreEspecieEncontrada ? `${nombreEspecieEncontrada} (${targetSpecies})` : targetSpecies;
+
+            const targetRec = (draft && draft.nro_recepcion) ? draft.nro_recepcion : null;
+            await cargarRecepcionesParaCanal(targetSpecies, targetRec);
+
+            if (draft && draft.nro_recepcion) {
+                const recActual = window.DespostePicker.getSelectedRecepcion();
+                if (recActual && recActual.MetodoEntrada === 'PESO_INDIVIDUAL' && draft.nro_especie) {
+                    const piezas = window.DespostePicker.getPiezas();
+                    const p = piezas.find(pz => String(pz.NroEspecie) === String(draft.nro_especie));
+                    if (p) window.DespostePicker.setPiezaVisual(p);
                 }
                 if (draft.peso_entrada && inputPeso) {
                     inputPeso.value = draft.peso_entrada;
                 }
             }
-            const notice = document.getElementById('desposteDraftNotice');
+            const notice = byId('desposteDraftNotice');
             if (notice && draft) notice.style.display = 'flex';
         }
     }
 
-    // 1. Manejo de botones de selección rápida de mesa
+    // Selección rápida de mesa
     document.querySelectorAll('.mesa-select-btn').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.mesa-select-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const mesa = btn.dataset.mesa || '';
-            if (inputMesa) {
-                inputMesa.value = mesa;
-            }
-            if (resMesa) {
-                resMesa.textContent = mesa;
-            }
+            if (inputMesa) inputMesa.value = mesa;
+            if (resMesa) resMesa.textContent = mesa;
             guardarBorrador();
         });
     });
@@ -152,132 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    if (inputObs) {
-        inputObs.addEventListener('input', guardarBorrador);
-    }
+    if (inputObs) inputObs.addEventListener('input', guardarBorrador);
 
-    // Función desacoplada para cargar recepciones de la especie seleccionada
-    async function cargarRecepcionesParaCanal(canal) {
-        hideAlert();
-        const opt = selectEspecie?.options[selectEspecie?.selectedIndex];
-        if (resEspecie) resEspecie.textContent = canal ? (opt ? opt.text : canal) : '-';
-
-        selectRecepcion.innerHTML = '<option value="">-- Cargando recepciones disponibles... --</option>';
-        grpPieza.style.display = 'none';
-        selectPieza.innerHTML = '<option value="">-- Seleccione la res individual --</option>';
-        helpRecepcion.textContent = '';
-        badgePesoDisp.textContent = '';
-        inputPeso.value = '';
-        if (resRecepcion) resRecepcion.textContent = '-';
-
-        if (!canal) {
-            selectRecepcion.innerHTML = '<option value="">-- Seleccione primero una especie --</option>';
-            guardarBorrador();
-            return;
-        }
-
-        try {
-            const res = await fetch(`/api/desposte/recepciones-disponibles?canal=${encodeURIComponent(canal)}`);
-            const json = await res.json();
-            if (json.success && json.receptions && json.receptions.length > 0) {
-                selectRecepcion.innerHTML = '<option value="">-- Seleccione una recepción --</option>';
-                json.receptions.forEach(r => {
-                    const op = document.createElement('option');
-                    op.value = r.NroRecepcion;
-                    op.dataset.metodo = r.MetodoEntrada;
-                    op.dataset.disp = r.PesoDisponible;
-                    op.textContent = `${r.NroRecepcion} (${r.MetodoEntrada}) - Saldo: ${parseFloat(r.PesoDisponible).toFixed(4)} kg - ${r.FechaHora.substring(0, 16)}`;
-                    selectRecepcion.appendChild(op);
-                });
-                helpRecepcion.textContent = `${json.receptions.length} recepción(es) disponible(s) con inventario.`;
-            } else {
-                selectRecepcion.innerHTML = '<option value="">-- Sin recepciones disponibles con saldo --</option>';
-                helpRecepcion.textContent = 'No hay recepciones con peso disponible para esta especie. Registre primero una recepción.';
-            }
-        } catch (e) {
-            selectRecepcion.innerHTML = '<option value="">-- Error al cargar recepciones --</option>';
-            showAlert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico', 'danger');
-        }
-        guardarBorrador();
-    }
-
-    // 2. Manejo de cambio de especie / canal
-    if (selectEspecie) {
-        selectEspecie.addEventListener('change', () => {
-            cargarRecepcionesParaCanal(selectEspecie.value);
-        });
-    }
-
-    // Función desacoplada para manejar cambio de recepción
-    async function manejarCambioRecepcion() {
-        hideAlert();
-        const nroRec = selectRecepcion.value;
-        const selectedOpt = selectRecepcion.options[selectRecepcion.selectedIndex];
-
-        grpPieza.style.display = 'none';
-        selectPieza.innerHTML = '<option value="">-- Seleccione la res individual --</option>';
-        badgePesoDisp.textContent = '';
-        inputPeso.value = '';
-
-        if (!nroRec || !selectedOpt || !selectedOpt.dataset.metodo) {
-            if (resRecepcion) resRecepcion.textContent = '-';
-            guardarBorrador();
-            return;
-        }
-
-        if (resRecepcion) resRecepcion.textContent = nroRec;
-
-        const metodo = selectedOpt.dataset.metodo;
-        const disp = parseFloat(selectedOpt.dataset.disp || '0');
-        badgePesoDisp.textContent = `Disp: ${disp.toFixed(4)} kg`;
-
-        if (metodo === 'PESO_INDIVIDUAL') {
-            grpPieza.style.display = 'block';
-            selectPieza.innerHTML = '<option value="">-- Cargando piezas disponibles... --</option>';
-            try {
-                const res = await fetch(`/api/recepcion/detalle?nrorec=${encodeURIComponent(nroRec)}`);
-                const json = await res.json();
-                if (json.success && json.details) {
-                    const disponibles = json.details.filter(d => d.EstadoDesposte === 'DISPONIBLE');
-                    if (disponibles.length > 0) {
-                        selectPieza.innerHTML = '<option value="">-- Seleccione la res individual --</option>';
-                        disponibles.forEach(d => {
-                            const op = document.createElement('option');
-                            op.value = d.NroEspecie;
-                            op.dataset.peso = d.PesoNeto;
-                            op.textContent = `Res #${d.NroEspecie} - Peso: ${parseFloat(d.PesoNeto).toFixed(4)} kg`;
-                            selectPieza.appendChild(op);
-                        });
-                    } else {
-                        selectPieza.innerHTML = '<option value="">-- Todas las piezas de esta recepción ya fueron despostadas --</option>';
-                    }
-                }
-            } catch (e) {
-                selectPieza.innerHTML = '<option value="">-- Error cargando detalle de piezas --</option>';
-            }
-        } else {
-            inputPeso.value = disp.toFixed(4);
-        }
-        guardarBorrador();
-    }
-
-    // 3. Manejo de cambio de recepción
-    if (selectRecepcion) {
-        selectRecepcion.addEventListener('change', manejarCambioRecepcion);
-    }
-
-    // 4. Manejo de cambio de pieza individual (Método 3)
-    if (selectPieza) {
-        selectPieza.addEventListener('change', () => {
-            const opt = selectPieza.options[selectPieza.selectedIndex];
-            if (opt && opt.dataset.peso) {
-                inputPeso.value = parseFloat(opt.dataset.peso).toFixed(4);
-            }
-            guardarBorrador();
-        });
-    }
-
-    // 5. Teclado numérico táctil en pantalla y sanitización
+    // Teclado táctil en pantalla y sanitización de peso
     if (inputPeso) {
         inputPeso.addEventListener('input', () => {
             let v = inputPeso.value.replace(',', '.').replace(/[^0-9.]/g, '');
@@ -304,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (cur.includes('.')) {
                     const decimals = cur.split('.')[1] || '';
-                    if (decimals.length >= 4) return; // Máximo 4 decimales
+                    if (decimals.length >= 4) return;
                 }
                 inputPeso.value = (cur === '0') ? key : cur + key;
             }
@@ -313,17 +338,38 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // 6. Envío del formulario
+    // Envío del Formulario
     if (form) {
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             hideAlert();
 
-            const pesoVal = parseFloat(inputPeso.value || '0');
+            if (!hiddenEspecie?.value) {
+                showAlert('Por favor seleccione una especie cárnica de origen.', 'danger');
+                playBeep('error');
+                window.DespostePicker.abrirModalEspecie();
+                return;
+            }
+
+            if (!hiddenRecepcion?.value) {
+                showAlert('Por favor seleccione una recepción con saldo disponible.', 'danger');
+                playBeep('error');
+                window.DespostePicker.abrirModalRecepcion();
+                return;
+            }
+
+            if (grpPieza && grpPieza.style.display !== 'none' && !hiddenPieza?.value) {
+                showAlert('Esta recepción requiere seleccionar la res individual a despostar.', 'danger');
+                playBeep('error');
+                window.DespostePicker.abrirModalPieza();
+                return;
+            }
+
+            const pesoVal = parseFloat(inputPeso?.value || '0');
             if (pesoVal <= 0 || isNaN(pesoVal)) {
                 showAlert('El peso de la canal para desposte debe ser mayor a 0 kg.', 'danger');
                 playBeep('error');
-                inputPeso.focus();
+                inputPeso?.focus();
                 return;
             }
 
@@ -345,7 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     sessionStorage.removeItem('st_draft_desposte_nueva');
                     playBeep('success');
                     showAlert(json.message || 'Orden abierta exitosamente. Redirigiendo...', 'success');
-                    // Redirigir a la estación de pesaje en la sala de desposte
                     setTimeout(() => {
                         window.location.href = `/deboning?order=${encodeURIComponent(json.nro_orden)}`;
                     }, 400);
@@ -365,7 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Descartar borrador manualmente
-    document.getElementById('btnDescartarBorrador')?.addEventListener('click', async () => {
+    byId('btnDescartarBorrador')?.addEventListener('click', async () => {
         const conf = await AppModal.confirm('¿Desea descartar el borrador y restablecer los campos?', {
             title: 'Descartar Borrador',
             danger: true,
@@ -374,22 +419,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (conf) {
             sessionStorage.removeItem('st_draft_desposte_nueva');
             if (form) form.reset();
-            const notice = document.getElementById('desposteDraftNotice');
+            const notice = byId('desposteDraftNotice');
             if (notice) notice.style.display = 'none';
             if (resMesa) resMesa.textContent = inputMesa ? inputMesa.value : '-';
             if (resEspecie) resEspecie.textContent = '-';
             if (resRecepcion) resRecepcion.textContent = '-';
-            grpPieza.style.display = 'none';
-            badgePesoDisp.textContent = '';
+            if (badgePesoDisp) badgePesoDisp.textContent = '';
+            if (inputPeso) inputPeso.value = '';
+            window.DespostePicker.resetAll();
             hideAlert();
         }
     });
 
-    // Enlaces de regreso con confirmación si hay datos ingresados
+    // Enlaces de regreso con confirmación
     document.querySelectorAll('a[href="/deboning"]').forEach(link => {
         link.addEventListener('click', async (e) => {
             const hasData = (inputPeso && parseFloat(inputPeso.value || '0') > 0) ||
-                (selectRecepcion && selectRecepcion.value !== '');
+                (hiddenRecepcion && hiddenRecepcion.value !== '');
             if (hasData) {
                 e.preventDefault();
                 const conf = await AppModal.confirm('Tiene datos seleccionados para esta nueva orden. ¿Desea salir y descartarlos?', {

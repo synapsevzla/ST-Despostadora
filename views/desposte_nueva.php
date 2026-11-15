@@ -81,40 +81,85 @@ ob_start();
                     <?= $hasMesas ? '2.' : '1.' ?> Especie y Canal de Origen
                 </h3>
 
+                <!-- 1. Trigger Visual Especie / Tipo de Canal -->
                 <div class="form-group" style="margin-bottom:1.25rem;">
-                    <label class="form-label" for="selectCanalEspecie">Especie / Tipo de Canal *</label>
-                    <select name="codprod_canal" id="selectCanalEspecie" class="form-input" required>
-                        <option value="">-- Seleccione una especie configurada --</option>
-                        <?php 
-                        $selectedEspecie = $selectedEspecie ?? '';
-                        foreach ($species as $sp): 
-                            $cCanal = (string)($sp['CodProdCanal'] ?? $sp['CodProd'] ?? '');
-                            $nCanal = (string)($sp['NombreCanal'] ?? $sp['NombreEspecie'] ?? $cCanal);
-                            $isSelected = ($selectedEspecie !== '' && ($selectedEspecie === $cCanal || $selectedEspecie === ($sp['CodProd'] ?? '')));
-                        ?>
-                            <option value="<?= Security::escape($cCanal) ?>" <?= $isSelected ? 'selected' : '' ?>>
-                                <?= Security::escape($nCanal) ?> (<?= Security::escape($cCanal) ?>)
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Especie / Tipo de Canal *</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(Toque para seleccionar)</span>
+                    </label>
+                    <input type="hidden" name="codprod_canal" id="selectCanalEspecie" value="<?= Security::escape($selectedEspecie ?? '') ?>" required>
+                    
+                    <div class="producto-picker-trigger" id="triggerEspecie" role="button" tabindex="0" title="Toque para seleccionar especie cárnica">
+                        <div class="picker-placeholder" id="placeholderEspecie">
+                            <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <span>-- Toque para seleccionar especie cárnica --</span>
+                        </div>
+                        <div class="picker-selected-wrap" id="selectedEspecieWrap" style="display:none;">
+                            <div class="picker-selected-info">
+                                <span class="picker-badge-cod" id="badgeEspecieCod"></span>
+                                <span class="picker-name" id="nameEspecie" style="font-weight:700;"></span>
+                            </div>
+                            <div class="picker-actions">
+                                <button type="button" class="picker-btn-cambiar" id="btnCambiarEspecie">Cambiar</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- 2. Trigger Visual Recepción con Saldo -->
                 <div class="form-group" style="margin-bottom:0.5rem;">
-                    <label class="form-label" for="selectRecepcion">Recepción de Canal con Peso Disponible *</label>
-                    <select name="nro_recepcion" id="selectRecepcion" class="form-input" required>
-                        <option value="">-- Seleccione primero una especie --</option>
-                    </select>
+                    <label class="form-label" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Recepción de Canal con Peso Disponible *</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(FIFO por defecto)</span>
+                    </label>
+                    <input type="hidden" name="nro_recepcion" id="selectRecepcion" value="" required>
+
+                    <div class="producto-picker-trigger disabled" id="triggerRecepcion" role="button" tabindex="0" title="Seleccione primero una especie">
+                        <div class="picker-placeholder" id="placeholderRecepcion">
+                            <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <span id="textPlaceholderRecepcion">-- Seleccione primero una especie --</span>
+                        </div>
+                        <div class="picker-selected-wrap" id="selectedRecepcionWrap" style="display:none;">
+                            <div class="picker-selected-info" style="display:flex; flex-direction:column; align-items:flex-start; gap:0.25rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                    <span class="picker-badge-cod" id="badgeRecepcionNro"></span>
+                                    <span class="badge" id="badgeRecepcionMetodo" style="font-size:0.75rem; font-family:monospace;"></span>
+                                    <span style="font-weight:800; color:var(--success); font-size:0.95rem;" id="badgeRecepcionSaldo"></span>
+                                </div>
+                                <div style="font-size:0.75rem; color:var(--text-muted);" id="infoRecepcionFecha"></div>
+                            </div>
+                            <div class="picker-actions">
+                                <button type="button" class="picker-btn-cambiar" id="btnCambiarRecepcion">Cambiar</button>
+                            </div>
+                        </div>
+                    </div>
                     <small id="recAvailableHelp" style="color:var(--text-muted); font-size:0.8rem; margin-top:4px; display:block;"></small>
                 </div>
 
-                <!-- Selección de Pieza Individual (si aplica Método 3) -->
+                <!-- 3. Trigger Visual Res / Pieza Individual (si aplica Método 3) -->
                 <div class="form-group" id="grpPiezaIndividual" style="display:none; margin-top:1.25rem; background:rgba(0,0,0,0.2); padding:1rem; border-radius:8px; border-left:3px solid var(--primary);">
-                    <label class="form-label" for="selectPiezaIndividual" style="color:var(--primary); font-weight:700; margin-bottom:0.35rem;">
-                        Res / Pieza Individual a Despostar *:
+                    <label class="form-label" style="color:var(--primary); font-weight:700; margin-bottom:0.35rem; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Res / Pieza Individual a Despostar *:</span>
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(Método Individual)</span>
                     </label>
-                    <select name="nro_especie" id="selectPiezaIndividual" class="form-input">
-                        <option value="">-- Seleccione la res individual --</option>
-                    </select>
+                    <input type="hidden" name="nro_especie" id="selectPiezaIndividual" value="">
+
+                    <div class="producto-picker-trigger" id="triggerPieza" role="button" tabindex="0" title="Toque para seleccionar la res individual">
+                        <div class="picker-placeholder" id="placeholderPieza">
+                            <svg class="icon" viewBox="0 0 24 24" style="width:18px; height:18px;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <span id="textPlaceholderPieza">-- Toque para seleccionar la res individual --</span>
+                        </div>
+                        <div class="picker-selected-wrap" id="selectedPiezaWrap" style="display:none;">
+                            <div class="picker-selected-info">
+                                <span class="picker-badge-cod" id="badgePiezaNro" style="background:rgba(244,107,58,0.2); color:var(--primary); font-weight:800;"></span>
+                                <span class="picker-name" id="namePiezaPeso" style="color:var(--success); font-weight:800; font-size:1.05rem;"></span>
+                                <span class="badge badge-success" style="font-size:0.7rem;">DISPONIBLE</span>
+                            </div>
+                            <div class="picker-actions">
+                                <button type="button" class="picker-btn-cambiar" id="btnCambiarPieza">Cambiar</button>
+                            </div>
+                        </div>
+                    </div>
                     <small style="color:var(--text-muted); font-size:0.8rem; display:block; margin-top:4px;">
                         Esta recepción requiere seleccionar la pieza exacta registrada individualmente.
                     </small>
@@ -240,6 +285,9 @@ ob_start();
 }
 </style>
 
+<link rel="stylesheet" href="/css/producto-picker.css">
+<?php require __DIR__ . '/partials/modal_desposte_selectores.php'; ?>
+<script src="/js/desposte_picker.js"></script>
 <script src="/js/desposte_nueva.js"></script>
 
 <?php
