@@ -26,6 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     async function mostrarDetallePiezas(nroRecepcion) {
         const modalEl = document.getElementById('modalDetallePiezas');
         const cont = document.getElementById('contenedorPiezasDetalle');
@@ -48,21 +58,47 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let html = '';
             data.details.forEach(p => {
-                const badgeColor = p.Estado === 'DISPONIBLE' ? 'rgba(193, 218, 198, 0.15)' : 'rgba(238, 103, 55, 0.15)';
-                const textColor = p.Estado === 'DISPONIBLE' ? 'var(--success)' : 'var(--danger)';
-                const estadoTxt = p.Estado === 'DISPONIBLE' ? 'DISPONIBLE' : 'DESPOSTADO';
+                const estado = String(p.EstadoDesposte || p.Estado || 'DISPONIBLE').toUpperCase();
+                let badgeBg = 'rgba(193, 218, 198, 0.15)';
+                let badgeColor = 'var(--success)';
+                let estadoTxt = 'DISPONIBLE';
+                let ordenInfo = '';
+
+                if (estado === 'EN_DESPOSTE' || estado === 'EN_PROCESO') {
+                    badgeBg = 'rgba(216, 134, 94, 0.15)';
+                    badgeColor = 'var(--warning, #f59e0b)';
+                    estadoTxt = 'EN CORTE';
+                    if (p.NroOrdenDesposte) {
+                        ordenInfo = `<span style="font-size:0.75rem; color:var(--warning, #f59e0b); display:block; font-family:monospace; margin-top:2px;">Orden: ${escapeHtml(p.NroOrdenDesposte)}</span>`;
+                    }
+                } else if (estado === 'DESPOSTADO' || estado === 'FINALIZADO') {
+                    badgeBg = 'rgba(140, 115, 101, 0.2)';
+                    badgeColor = 'var(--text-muted)';
+                    estadoTxt = 'DESPOSTADO';
+                    if (p.NroOrdenDesposte) {
+                        ordenInfo = `<span style="font-size:0.75rem; color:var(--text-muted); display:block; font-family:monospace; margin-top:2px;">Orden: ${escapeHtml(p.NroOrdenDesposte)}</span>`;
+                    }
+                }
+
+                const pesoVal = (p.PesoNeto !== undefined && p.PesoNeto !== null) ? p.PesoNeto : (p.PesoKg !== undefined ? p.PesoKg : 0);
+                const pesoNum = parseFloat(pesoVal);
+                const pesoStr = isNaN(pesoNum) ? '0.0000' : pesoNum.toFixed(4);
+                const canalLabel = p.CodProdCanal ? `<span style="font-size:0.75rem; color:var(--text-muted); margin-left:0.5rem;">[${escapeHtml(p.CodProdCanal)}]</span>` : '';
 
                 html += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:0.6rem 0.85rem; border-radius:6px; border:1px solid var(--border-color);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); padding:0.65rem 0.85rem; border-radius:6px; border:1px solid var(--border-color);">
                         <div>
-                            <span style="font-weight:700; color:var(--text-primary);">Res #${p.NroEspecie}</span>
-                            <span style="font-size:0.75rem; color:var(--text-muted); margin-left:0.5rem;">[${p.CodProdCanal}]</span>
+                            <div style="display:flex; align-items:center;">
+                                <span style="font-weight:700; color:var(--text-primary);">Res #${escapeHtml(p.NroEspecie)}</span>
+                                ${canalLabel}
+                            </div>
+                            ${ordenInfo}
                         </div>
                         <div style="display:flex; align-items:center; gap:0.75rem;">
                             <span style="font-weight:700; font-family:monospace; color:var(--primary); font-size:1.05rem;">
-                                ${parseFloat(p.PesoKg).toFixed(4)} kg
+                                ${pesoStr} kg
                             </span>
-                            <span class="badge" style="background:${badgeColor}; color:${textColor}; font-size:0.75rem;">
+                            <span class="badge" style="background:${badgeBg}; color:${badgeColor}; font-size:0.75rem; font-weight:700;">
                                 ${estadoTxt}
                             </span>
                         </div>

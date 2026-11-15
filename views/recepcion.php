@@ -88,7 +88,7 @@ ob_start();
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Cant.</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Peso Neto</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Disponible</th>
-                            <th style="padding: 0.75rem 0.5rem; text-align: right;">CostAct ERP</th>
+                            <th style="padding: 0.75rem 0.5rem; text-align: center;">Piezas Disp.</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: right;">Costo Total</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: center;">Estado</th>
                             <th style="padding: 0.75rem 0.5rem; text-align: center;">Doc. ERP</th>
@@ -126,8 +126,22 @@ ob_start();
                                 <td style="padding: 0.75rem 0.5rem; text-align: right; font-weight: 700; color: <?= (float)$rec['PesoDisponible'] > 0 ? 'var(--success)' : 'var(--text-muted)' ?>;">
                                     <?= number_format((float)$rec['PesoDisponible'], 4) ?>
                                 </td>
-                                <td style="padding: 0.75rem 0.5rem; text-align: right; color: var(--text-secondary);">
-                                    $<?= number_format((float)$rec['CostActCanal'], 4) ?>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
+                                    <?php if ($rec['MetodoEntrada'] === 'SOLO_PESO'): ?>
+                                        <span style="color: var(--text-muted); font-size: 0.85rem;">-</span>
+                                    <?php else: ?>
+                                        <?php 
+                                            $piezasDisp = isset($rec['CantPiezasDisponibles']) ? (int)$rec['CantPiezasDisponibles'] : 0;
+                                            $piezasTot = (int)$rec['CantidadEspecies'];
+                                            $colorDisp = $piezasDisp > 0 ? 'var(--success)' : 'var(--text-muted)';
+                                        ?>
+                                        <span style="font-weight: 700; color: <?= $colorDisp ?>; font-size: 0.95rem;">
+                                            <?= $piezasDisp ?>
+                                        </span>
+                                        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: normal;">
+                                            / <?= $piezasTot ?>
+                                        </span>
+                                    <?php endif; ?>
                                 </td>
                                 <td style="padding: 0.75rem 0.5rem; text-align: right; font-weight: 600; color: var(--text-primary);">
                                     $<?= number_format((float)$rec['CostoTotalNeto'], 2) ?>
@@ -231,8 +245,18 @@ ob_start();
                                 </span>
                             </div>
                             <div class="data-metric">
-                                <span class="data-metric-label">Costo ERP/kg</span>
-                                <span class="data-metric-val">$<?= number_format((float)$rec['CostActCanal'], 2) ?></span>
+                                <span class="data-metric-label">Piezas Disp.</span>
+                                <?php if ($rec['MetodoEntrada'] === 'SOLO_PESO'): ?>
+                                    <span class="data-metric-val" style="color: var(--text-muted);">-</span>
+                                <?php else: ?>
+                                    <?php 
+                                        $pDisp = isset($rec['CantPiezasDisponibles']) ? (int)$rec['CantPiezasDisponibles'] : 0;
+                                        $pTot = (int)$rec['CantidadEspecies'];
+                                    ?>
+                                    <span class="data-metric-val <?= $pDisp > 0 ? 'val-success' : '' ?>" style="<?= $pDisp <= 0 ? 'color: var(--text-muted);' : '' ?>">
+                                        <?= $pDisp ?> <small>/ <?= $pTot ?></small>
+                                    </span>
+                                <?php endif; ?>
                             </div>
                             <div class="data-metric">
                                 <span class="data-metric-label">Total Inversión</span>

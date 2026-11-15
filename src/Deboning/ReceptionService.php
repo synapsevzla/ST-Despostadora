@@ -355,6 +355,23 @@ final class ReceptionService
                         CAST(r.PesoTotalNeto AS FLOAT) AS PesoTotalNeto,
                         CAST(r.CostoTotalNeto AS FLOAT) AS CostoTotalNeto,
                         CAST(r.PesoDisponible AS FLOAT) AS PesoDisponible,
+                        CASE 
+                            WHEN r.MetodoEntrada = 'PESO_INDIVIDUAL' THEN (
+                                SELECT COUNT(1) 
+                                FROM ST_Despostadora_RecepcionesDetalle rd 
+                                WHERE rd.NroRecepcion = r.NroRecepcion AND rd.EstadoDesposte = 'DISPONIBLE'
+                            )
+                            WHEN r.MetodoEntrada = 'PESO_CANTIDAD' THEN (
+                                CASE 
+                                    WHEN r.PesoDisponible <= 0.0001 THEN 0
+                                    ELSE CASE 
+                                        WHEN r.CantidadEspecies - ISNULL((SELECT SUM(d.CantidadProcesada) FROM ST_Despostadora_Despostes d WHERE d.NroRecepcion = r.NroRecepcion AND d.Estado <> 'ANULADO'), 0) < 0 THEN 0
+                                        ELSE r.CantidadEspecies - ISNULL((SELECT SUM(d.CantidadProcesada) FROM ST_Despostadora_Despostes d WHERE d.NroRecepcion = r.NroRecepcion AND d.Estado <> 'ANULADO'), 0)
+                                    END
+                                END
+                            )
+                            ELSE NULL
+                        END AS CantPiezasDisponibles,
                         CAST(ISNULL(r.DocEsperaEnviado, 0) AS INT) AS DocEsperaEnviado,
                         ISNULL(r.DocEsperaNumeroD, '') AS DocEsperaNumeroD,
                         r.FechaDocEspera,
@@ -398,11 +415,22 @@ final class ReceptionService
     public static function getReceptionDetail(string $nroRecepcion): array
     {
         $pdo = Database::getConnection();
-        $stmt = $pdo->prepare("SELECT ID, NroRecepcion, NroEspecie, CAST(PesoNeto AS FLOAT) AS PesoNeto, 
-                                      CAST(CostoEspecie AS FLOAT) AS CostoEspecie, EstadoDesposte, NroOrdenDesposte 
-                               FROM ST_Despostadora_RecepcionesDetalle 
-                               WHERE NroRecepcion = :nrorec 
-                               ORDER BY NroEspecie ASC");
+        $sql = "SELECT 
+                    rd.ID, 
+                    rd.NroRecepcion, 
+                    rd.NroEspecie, 
+                    CAST(rd.PesoNeto AS FLOAT) AS PesoNeto, 
+                    CAST(rd.CostoEspecie AS FLOAT) AS CostoEspecie, 
+                    rd.EstadoDesposte, 
+                    ISNULL(rd.NroOrdenDesposte, '') AS NroOrdenDesposte,
+                    r.CodProdCanal,
+                    LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal
+                FROM ST_Despostadora_RecepcionesDetalle rd
+                INNER JOIN ST_Despostadora_Recepciones r ON r.NroRecepcion = rd.NroRecepcion
+                LEFT JOIN SAPROD p ON p.CodProd = r.CodProdCanal
+                WHERE rd.NroRecepcion = :nrorec 
+                ORDER BY rd.NroEspecie ASC";
+        $stmt = $pdo->prepare($sql);
         $stmt->bindValue(':nrorec', trim($nroRecepcion), PDO::PARAM_STR);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
