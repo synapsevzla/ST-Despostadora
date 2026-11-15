@@ -1,6 +1,24 @@
 <?php
 declare(strict_types=1);
 
+// Autocarga nativa PSR-4 ligera para evitar errores de clases no encontradas
+spl_autoload_register(function (string $class): void {
+    $prefixes = [
+        'Src\\' => dirname(__DIR__) . '/src/',
+        'Config\\' => dirname(__DIR__) . '/config/',
+    ];
+    foreach ($prefixes as $prefix => $baseDir) {
+        if (str_starts_with($class, $prefix)) {
+            $relative = str_replace('\\', '/', substr($class, strlen($prefix)));
+            $file = $baseDir . $relative . '.php';
+            if (is_file($file)) {
+                require_once $file;
+                return;
+            }
+        }
+    }
+});
+
 // Carga de configuración y seguridad
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/security.php';
@@ -21,6 +39,7 @@ require_once __DIR__ . '/../src/Deboning/DeboningErpHoldService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningCutsAuditService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningSyncService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningQueryService.php';
+require_once __DIR__ . '/../src/Deboning/DeboningAnnulmentService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningController.php';
 require_once __DIR__ . '/../src/Deboning/DashboardService.php';
