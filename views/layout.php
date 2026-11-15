@@ -13,6 +13,7 @@ use Config\Assets;
     <link rel="icon" type="image/svg+xml" href="<?= Assets::faviconDataUri() ?>">
     <link rel="stylesheet" href="/css/app.css">
     <link rel="stylesheet" href="/css/responsive-cards.css">
+    <link rel="stylesheet" href="/css/toasts.css">
 </head>
 <body class="<?= Security::escape($bodyClass ?? '') ?>">
     <div class="app-shell">

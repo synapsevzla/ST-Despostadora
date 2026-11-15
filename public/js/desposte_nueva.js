@@ -365,8 +365,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Descartar borrador manualmente
-    document.getElementById('btnDescartarBorrador')?.addEventListener('click', () => {
-        if (confirm('¿Desea descartar el borrador y restablecer los campos?')) {
+    document.getElementById('btnDescartarBorrador')?.addEventListener('click', async () => {
+        const conf = await AppModal.confirm('¿Desea descartar el borrador y restablecer los campos?', {
+            title: 'Descartar Borrador',
+            danger: true,
+            confirmText: 'Sí, descartar'
+        });
+        if (conf) {
             sessionStorage.removeItem('st_draft_desposte_nueva');
             if (form) form.reset();
             const notice = document.getElementById('desposteDraftNotice');
@@ -382,29 +387,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Enlaces de regreso con confirmación si hay datos ingresados
     document.querySelectorAll('a[href="/deboning"]').forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             const hasData = (inputPeso && parseFloat(inputPeso.value || '0') > 0) ||
                 (selectRecepcion && selectRecepcion.value !== '');
             if (hasData) {
-                if (!confirm('Tiene datos seleccionados para esta nueva orden. ¿Desea salir y descartarlos?')) {
-                    e.preventDefault();
-                    return;
+                e.preventDefault();
+                const conf = await AppModal.confirm('Tiene datos seleccionados para esta nueva orden. ¿Desea salir y descartarlos?', {
+                    title: 'Salir de Nueva Orden',
+                    danger: true,
+                    confirmText: 'Salir y descartar'
+                });
+                if (conf) {
+                    isSubmitting = true;
+                    sessionStorage.removeItem('st_draft_desposte_nueva');
+                    window.location.href = '/deboning';
                 }
+            } else {
+                isSubmitting = true;
+                sessionStorage.removeItem('st_draft_desposte_nueva');
             }
-            isSubmitting = true;
-            sessionStorage.removeItem('st_draft_desposte_nueva');
         });
-    });
-
-    // Protección nativa contra recarga accidental (F5, Ctrl+R)
-    window.addEventListener('beforeunload', (e) => {
-        if (isSubmitting) return;
-        const hasData = (inputPeso && parseFloat(inputPeso.value || '0') > 0) ||
-            (selectRecepcion && selectRecepcion.value !== '');
-        if (hasData) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
     });
 
     // Restaurar borrador o precarga inicial

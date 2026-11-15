@@ -208,7 +208,12 @@ async function registerCutWeight() {
 }
 
 async function deleteCutItem(id) {
-    if (!confirm('¿Confirma que desea anular este pesaje de corte?')) return;
+    const conf = await AppModal.confirm('¿Confirma que desea anular este pesaje de corte?', {
+        title: 'Anular Pesaje',
+        danger: true,
+        confirmText: 'Sí, anular'
+    });
+    if (!conf) return;
     const formData = new FormData();
     formData.append('csrf_token', getCsrfToken());
     formData.append('nro_orden', currentOrder.NroOrdenDesposte);
@@ -576,18 +581,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Escape') {
             closeWeighModal();
             closeCloseOrderModal();
-        }
-    });
-
-    window.addEventListener('beforeunload', (e) => {
-        const modal = document.getElementById('modalWeighCalculator');
-        const weighInput = document.getElementById('weighInput');
-        if (currentOrder && modal && modal.style.display !== 'none') {
-            const hasTypedWeight = weighInput && parseFloat(weighInput.value || '0') > 0;
-            if (hasTypedWeight) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
         }
     });
 });

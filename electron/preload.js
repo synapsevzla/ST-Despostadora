@@ -11,7 +11,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     maximize: () => ipcRenderer.send('window-maximize'),
     close: () => ipcRenderer.send('window-close'),
     testDb: (data) => ipcRenderer.invoke('test-db-connection', data),
-    saveDb: (data) => ipcRenderer.invoke('save-db-config', data)
+    saveDb: (data) => ipcRenderer.invoke('save-db-config', data),
+    restoreFocus: () => ipcRenderer.send('restore-focus')
 });
 
 // 2. Inyección de Barra de Título personalizada en la aplicación web
@@ -125,4 +126,37 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('stMinBtn')?.addEventListener('click', () => ipcRenderer.send('window-minimize'));
     document.getElementById('stMaxBtn')?.addEventListener('click', () => ipcRenderer.send('window-maximize'));
     document.getElementById('stCloseBtn')?.addEventListener('click', () => ipcRenderer.send('window-close'));
+
+    // 3. Garantizar foco de teclado en ventanas sin marco al interactuar
+    window.addEventListener('focus', () => {
+        ipcRenderer.send('restore-focus');
+    });
+
+    // Delegación preventiva: asegurar que Electron no pierda el enlace de teclado al interactuar con campos
+    document.addEventListener('focusin', (e) => {
+        const target = e.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+            if (!document.hasFocus()) {
+                ipcRenderer.send('restore-focus');
+            }
+        }
+    });
+
+    // Envoltura de seguridad contra alertas nativas residuales para evitar bug de Chromium
+    const origAlert = window.alert;
+    window.alert = function(msg) {
+        if (window.AppToast && typeof window.AppToast.show === 'function') {
+            window.AppToast.show(msg, 'info');
+        } else {
+            origAlert.call(window, msg);
+            ipcRenderer.send('restore-focus');
+        }
+    };
+
+    const origConfirm = window.confirm;
+    window.confirm = function(msg) {
+        const res = origConfirm.call(window, msg);
+        ipcRenderer.send('restore-focus');
+        return res;
+    };
 });

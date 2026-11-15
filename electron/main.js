@@ -76,6 +76,20 @@ async function createMainWindow(port) {
     console.log(`[MAIN] Cargando aplicación web en: ${targetUrl}`);
     mainWindow.loadURL(targetUrl);
 
+    // Restauración y garantía de foco de teclado en ventanas sin marco (frameless)
+    mainWindow.webContents.on('did-finish-load', () => {
+        if (mainWindow) {
+            mainWindow.focus();
+            mainWindow.webContents.focus();
+        }
+    });
+
+    mainWindow.on('focus', () => {
+        if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.focus();
+        }
+    });
+
     mainWindow.on('closed', () => {
         mainWindow = null;
     });
@@ -127,6 +141,20 @@ app.whenReady().then(async () => {
     ipcMain.on('window-close', (event) => {
         const win = BrowserWindow.fromWebContents(event.sender);
         if (win) win.close();
+    });
+
+    // Manejador IPC para restaurar foco de teclado en ventanas sin marco (frameless)
+    ipcMain.on('restore-focus', (event) => {
+        const win = BrowserWindow.fromWebContents(event.sender);
+        if (win) {
+            if (process.platform === 'win32') {
+                win.blur();
+                win.focus();
+            }
+            if (win.webContents) {
+                win.webContents.focus();
+            }
+        }
     });
 
     // 2. Manejadores IPC para Configuración de Base de Datos

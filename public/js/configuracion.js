@@ -28,9 +28,13 @@ async function guardarConfigGeneral(e) {
     try {
         const res = await fetch('/api/config/general', { method: 'POST', body: new FormData(e.target) });
         const data = await res.json();
-        alert(data.success ? (data.message || 'Configuración guardada exitosamente.') : ('Error: ' + (data.error || 'No se pudo guardar')));
+        if (data.success) {
+            AppToast.success(data.message || 'Configuración guardada exitosamente.');
+        } else {
+            AppToast.error('Error: ' + (data.error || 'No se pudo guardar'));
+        }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -42,13 +46,13 @@ async function guardarCorrelativo(e, form) {
         const res = await fetch('/api/config/correlativo', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
-            alert(data.message || 'Correlativo actualizado.');
+            AppToast.success(data.message || 'Correlativo actualizado.');
             if (data.preview && byId('prev_' + tipo)) byId('prev_' + tipo).textContent = data.preview;
         } else {
-            alert('Error: ' + (data.error || 'No se pudo actualizar'));
+            AppToast.error('Error: ' + (data.error || 'No se pudo actualizar'));
         }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -102,12 +106,12 @@ async function guardarEspecie(e) {
     const formData = new FormData(e.target);
     const codCanal = byId('esp_codprod_hidden')?.value || byId('sel_codprod')?.value || '';
     if (!codCanal) {
-        alert('Por favor seleccione el Producto Canal.');
+        AppToast.warning('Por favor seleccione el Producto Canal.');
         return;
     }
     const codMerma = byId('sel_codprod_merma')?.value || '';
     if (!codMerma) {
-        alert('Por favor seleccione el Producto para Merma / Desperdicio.');
+        AppToast.warning('Por favor seleccione el Producto para Merma / Desperdicio.');
         return;
     }
     formData.set('codprod', codCanal);
@@ -117,13 +121,13 @@ async function guardarEspecie(e) {
         const res = await fetch('/api/config/especie', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
-            alert(data.message || 'Especie guardada.');
-            location.reload();
+            AppToast.success(data.message || 'Especie guardada.');
+            setTimeout(() => location.reload(), 600);
         } else {
-            alert('Error: ' + (data.error || 'No se pudo guardar la especie.'));
+            AppToast.error('Error: ' + (data.error || 'No se pudo guardar la especie.'));
         }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -240,7 +244,7 @@ async function guardarNuevoCorte(e) {
     const formData = new FormData(e.target);
     const hiddenCorte = byId('modal_corte_hidden')?.value || byId('modal_sel_corte')?.value || '';
     if (!hiddenCorte) {
-        alert('Por favor seleccione un Corte a asociar.');
+        AppToast.warning('Por favor seleccione un Corte a asociar.');
         return;
     }
     formData.set('corte', hiddenCorte);
@@ -249,18 +253,25 @@ async function guardarNuevoCorte(e) {
         const res = await fetch('/api/config/cortes/agregar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
+            AppToast.success('Corte asociado exitosamente.');
             cerrarModalCorte();
             await cargarListaCortes(currentModalCanal);
         } else {
-            alert('Error: ' + (data.error || 'No se pudo guardar el corte.'));
+            AppToast.error('Error: ' + (data.error || 'No se pudo guardar el corte.'));
         }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
 async function eliminarCorte(codCanal, codCorte) {
-    if (!confirm('¿Desea desvincular este corte de la especie?')) return;
+    const conf = await AppModal.confirm('¿Desea desvincular este corte de la especie?', {
+        title: 'Desvincular Corte',
+        danger: true,
+        confirmText: 'Sí, desvincular'
+    });
+    if (!conf) return;
+
     const formData = new FormData();
     formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     formData.append('canal', codCanal);
@@ -270,12 +281,13 @@ async function eliminarCorte(codCanal, codCorte) {
         const res = await fetch('/api/config/cortes/eliminar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
+            AppToast.success('Corte desvinculado exitosamente.');
             await cargarListaCortes(codCanal);
         } else {
-            alert('Error: ' + (data.error || 'No se pudo eliminar el corte.'));
+            AppToast.error('Error: ' + (data.error || 'No se pudo eliminar el corte.'));
         }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -353,14 +365,14 @@ async function guardarMesa(e) {
         const res = await fetch('/api/config/mesas/guardar', { method: 'POST', body: new FormData(e.target) });
         const data = await res.json();
         if (data.success) {
-            alert(data.message || 'Mesa guardada exitosamente.');
+            AppToast.success(data.message || 'Mesa guardada exitosamente.');
             cancelarEdicionMesa();
             if (data.mesas) renderizarListaMesas(data.mesas);
         } else {
-            alert('Error: ' + (data.error || 'No se pudo guardar la mesa'));
+            AppToast.error('Error: ' + (data.error || 'No se pudo guardar la mesa'));
         }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
@@ -373,15 +385,25 @@ async function toggleEstadoMesa(id, nuevoActivo) {
     try {
         const res = await fetch('/api/config/mesas/estado', { method: 'POST', body: formData });
         const data = await res.json();
-        if (data.success && data.mesas) renderizarListaMesas(data.mesas);
-        else if (!data.success) alert('Error: ' + (data.error || 'No se pudo modificar el estado'));
+        if (data.success && data.mesas) {
+            AppToast.success('Estado de la mesa actualizado.');
+            renderizarListaMesas(data.mesas);
+        } else if (!data.success) {
+            AppToast.error('Error: ' + (data.error || 'No se pudo modificar el estado'));
+        }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 
 async function eliminarMesa(id, nombre) {
-    if (!confirm(`¿Está seguro de eliminar la mesa "${nombre}"? Esta acción solo es posible si no tiene órdenes de desposte asociadas.`)) return;
+    const conf = await AppModal.confirm(`¿Está seguro de eliminar la mesa "${nombre}"? Esta acción solo es posible si no tiene órdenes de desposte asociadas.`, {
+        title: 'Eliminar Mesa',
+        danger: true,
+        confirmText: 'Sí, eliminar'
+    });
+    if (!conf) return;
+
     const formData = new FormData();
     formData.append('csrf_token', document.querySelector('input[name="csrf_token"]')?.value || '');
     formData.append('id', id);
@@ -390,13 +412,13 @@ async function eliminarMesa(id, nombre) {
         const res = await fetch('/api/config/mesas/eliminar', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
-            alert(data.message || 'Mesa eliminada correctamente.');
+            AppToast.success(data.message || 'Mesa eliminada correctamente.');
             if (data.mesas) renderizarListaMesas(data.mesas);
         } else {
-            alert('Error: ' + (data.error || 'No se pudo eliminar la mesa'));
+            AppToast.error('Error: ' + (data.error || 'No se pudo eliminar la mesa'));
         }
     } catch {
-        alert('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
+        AppToast.error('Base de datos o servidor fuera de línea por favor contacte a soporte técnico');
     }
 }
 

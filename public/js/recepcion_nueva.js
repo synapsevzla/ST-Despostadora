@@ -302,9 +302,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (badgeTotalPiezasTop) badgeTotalPiezasTop.textContent = `${totalPiezas} Reses Capturadas`;
     }
 
-    document.getElementById('btnLimpiarPiezas')?.addEventListener('click', () => {
+    document.getElementById('btnLimpiarPiezas')?.addEventListener('click', async () => {
         if (piezasIndividuales.length === 0) return;
-        if (confirm('¿Está seguro de limpiar todas las piezas ingresadas?')) {
+        const conf = await AppModal.confirm('¿Está seguro de limpiar todas las piezas ingresadas?', {
+            title: 'Limpiar Piezas',
+            danger: true,
+            confirmText: 'Sí, limpiar'
+        });
+        if (conf) {
             piezasIndividuales.length = 0;
             renderizarListaPiezas();
             actualizarResumenIndividual();
@@ -404,8 +409,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Descartar borrador manualmente
-    document.getElementById('btnDescartarBorrador')?.addEventListener('click', () => {
-        if (confirm('¿Está seguro de descartar el borrador y limpiar todos los datos?')) {
+    document.getElementById('btnDescartarBorrador')?.addEventListener('click', async () => {
+        const conf = await AppModal.confirm('¿Está seguro de descartar el borrador y limpiar todos los datos?', {
+            title: 'Descartar Borrador',
+            danger: true,
+            confirmText: 'Sí, descartar'
+        });
+        if (conf) {
             sessionStorage.removeItem('st_draft_recepcion_nueva');
             piezasIndividuales.length = 0;
             renderizarListaPiezas();
@@ -422,28 +432,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Enlaces de regreso con confirmación si hay pesajes cargados
     document.querySelectorAll('a[href="/recepcion"]').forEach(link => {
-        link.addEventListener('click', (e) => {
+        link.addEventListener('click', async (e) => {
             if (piezasIndividuales.length > 0) {
-                if (!confirm('Tiene reses pesadas sin guardar en esta recepción. ¿Desea salir y descartar los datos?')) {
-                    e.preventDefault();
-                    return;
+                e.preventDefault();
+                const conf = await AppModal.confirm('Tiene reses pesadas sin guardar en esta recepción. ¿Desea salir y descartar los datos?', {
+                    title: 'Salir de Nueva Recepción',
+                    danger: true,
+                    confirmText: 'Salir y descartar'
+                });
+                if (conf) {
+                    isSubmitting = true;
+                    sessionStorage.removeItem('st_draft_recepcion_nueva');
+                    window.location.href = '/recepcion';
                 }
+            } else {
+                isSubmitting = true;
+                sessionStorage.removeItem('st_draft_recepcion_nueva');
             }
-            isSubmitting = true;
-            sessionStorage.removeItem('st_draft_recepcion_nueva');
         });
-    });
-
-    // Protección nativa contra recarga accidental (F5, Ctrl+R o navegación inesperada)
-    window.addEventListener('beforeunload', (e) => {
-        if (isSubmitting) return;
-        const hasData = (piezasIndividuales.length > 0) ||
-            (inputPesoBruto && parseFloat(inputPesoBruto.value || '0') > 0) ||
-            (inputObs && inputObs.value.trim() !== '');
-        if (hasData) {
-            e.preventDefault();
-            e.returnValue = '';
-        }
     });
 
     // Restaurar borrador previo si existe en la sesión
