@@ -76,6 +76,18 @@ const DeboningSync = (() => {
 
         const modalNotice = document.getElementById('modalOrderClosedNotice');
         if (modalNotice) {
+            const isAnnulled = (data.estado === 'ANULADO');
+            const titleEl = modalNotice.querySelector('h2');
+            const descEl = document.getElementById('orderClosedNoticeText');
+            if (titleEl) {
+                titleEl.textContent = isAnnulled ? 'Orden de Desposte Anulada' : 'Orden de Desposte Finalizada';
+            }
+            if (descEl) {
+                descEl.textContent = isAnnulled 
+                    ? 'Esta orden fue anulada por otro usuario y su existencia fue restituida a la recepción.'
+                    : 'Esta orden de desposte ha sido cerrada y finalizada por otro usuario en la mesa.';
+            }
+
             const userEl = document.getElementById('closedNoticeUser');
             const timeEl = document.getElementById('closedNoticeTime');
             if (userEl) userEl.textContent = data.closed_by || 'Otro operador';
@@ -111,7 +123,7 @@ const DeboningSync = (() => {
         if (isFetching) return;
         if (!window.currentOrder || !window.currentOrder.NroOrdenDesposte) return;
         if (!document.body.classList.contains('station-active')) return;
-        if (window.currentOrder.Estado === 'FINALIZADO') return;
+        if (window.currentOrder.Estado === 'FINALIZADO' || window.currentOrder.Estado === 'ANULADO') return;
 
         if (!navigator.onLine) {
             updateBadge('offline');
@@ -133,8 +145,8 @@ const DeboningSync = (() => {
             consecutiveErrors = 0;
             updateBadge('online');
 
-            // 1. Detectar si la orden fue finalizada por otro usuario
-            if (json.estado === 'FINALIZADO') {
+            // 1. Detectar si la orden fue finalizada o anulada por otro usuario
+            if (json.estado === 'FINALIZADO' || json.estado === 'ANULADO') {
                 handleClosedOrderNotice(json);
                 return;
             }

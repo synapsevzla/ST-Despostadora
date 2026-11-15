@@ -216,6 +216,12 @@ try {
         }
         break;
 
+    case '/api/desposte/anular':
+        if ($requestMethod === 'POST') {
+            DeboningController::annul();
+        }
+        break;
+
     case '/api/desposte/recepciones-disponibles':
         DeboningController::availableReceptions();
         break;

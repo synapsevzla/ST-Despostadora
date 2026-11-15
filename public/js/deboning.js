@@ -245,9 +245,14 @@ function renderBalanceAndTable(balance) {
     }
     currentCutsCatalog.sort((a, b) => (a.NombreCorte || '').localeCompare(b.NombreCorte || '', 'es', { sensitivity: 'base' }));
 
+    window.lastBalanceData = balance;
+    const isOperable = (ord.Estado === 'EN_PROCESO');
     const isFinalized = (ord.Estado === 'FINALIZADO');
     const btnClose = document.getElementById('btnPromptCloseStation');
-    if (btnClose) btnClose.style.display = isFinalized ? 'none' : 'inline-flex';
+    if (btnClose) btnClose.style.display = isOperable ? 'inline-flex' : 'none';
+
+    const btnAnnul = document.getElementById('btnPromptAnnulStation');
+    if (btnAnnul) btnAnnul.style.display = isOperable ? 'inline-flex' : 'none';
 
     const btnStationErp = document.getElementById('btnStationErpDocs');
     const badgeStationErp = document.getElementById('stationErpBadge');
@@ -337,13 +342,13 @@ function renderBalanceAndTable(balance) {
         if (isWeighed) {
             itemNumHtml = weighed.map(w => `#${w.NroItem}`).join(', ');
             loteHtml = weighed.map(w => `<span class="badge" style="background:#55433a; color:var(--primary); font-family:monospace; font-size:0.8rem; margin-right:2px;" title="${parseFloat(w.PesoNeto).toFixed(4)} kg">${w.NroLote}</span>`).join(' ');
-            if (!isFinalized) {
+            if (isOperable) {
                 editBtnHtml = weighed.map(w => `<button type="button" class="btn btn-outline btn-edit-cut" style="padding:2px 6px; font-size:0.75rem; color:#3498db;" data-id="${w.ID}" data-lote="${w.NroLote}" data-peso="${w.PesoNeto}" data-corte="${cut.NombreCorte}" title="Corregir peso con auditoría">✏️</button>`).join(' ');
                 deleteBtnHtml = weighed.map(w => `<button type="button" class="btn btn-outline btn-delete-cut" style="padding:2px 6px; font-size:0.75rem; color:var(--danger);" data-id="${w.ID}" title="Anular pesaje ${w.NroLote}">&times;</button>`).join(' ');
             }
         }
 
-        const assignBtnHtml = isFinalized ? '' : `<button type="button" class="btn btn-sm ${isWeighed ? 'btn-outline' : 'btn-primary'} btn-assign-cut" data-code="${cut.CodProdCorte}" title="Asignar peso" style="padding:3px 8px; font-size:0.78rem; font-weight:700;">⚖️ ${isWeighed ? '+ Peso' : 'Pesar'}</button>`;
+        const assignBtnHtml = isOperable ? `<button type="button" class="btn btn-sm ${isWeighed ? 'btn-outline' : 'btn-primary'} btn-assign-cut" data-code="${cut.CodProdCorte}" title="Asignar peso" style="padding:3px 8px; font-size:0.78rem; font-weight:700;">⚖️ ${isWeighed ? '+ Peso' : 'Pesar'}</button>` : '';
 
         if (tbody) {
             const tr = document.createElement('tr');

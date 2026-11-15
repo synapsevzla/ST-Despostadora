@@ -533,6 +533,19 @@ final class DeboningService
         $stmtUpd->execute();
     }
 
+    /**
+     * Anula una orden de desposte activa y restituye la existencia a su recepción de origen.
+     *
+     * @param string $nroOrden
+     * @param string $motivo
+     * @param string $codusua
+     * @return array<string, mixed>
+     */
+    public static function annulOrder(string $nroOrden, string $motivo, string $codusua): array
+    {
+        return DeboningAnnulmentService::annulOrder($nroOrden, $motivo, $codusua);
+    }
+
     public static function updateCutWeight(array $data, string $codusua): array
     {
         return DeboningCutsAuditService::updateCutWeight($data, $codusua);

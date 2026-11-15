@@ -278,6 +278,40 @@ final class DeboningController
     }
 
     /**
+     * Endpoint API para anular una orden de desposte activa y regresar su existencia.
+     */
+    public static function annul(): void
+    {
+        $user = AuthController::checkAuth();
+        header('Content-Type: application/json; charset=UTF-8');
+
+        $csrfToken = $_POST['csrf_token'] ?? '';
+        if (!Security::validateCsrfToken($csrfToken)) {
+            echo json_encode(['success' => false, 'error' => 'Token CSRF inválido o expirado.']);
+            return;
+        }
+
+        try {
+            $nroOrden = trim((string)($_POST['nro_orden'] ?? ''));
+            $motivo = trim((string)($_POST['motivo'] ?? ''));
+
+            $res = DeboningService::annulOrder($nroOrden, $motivo, $user['codusua']);
+
+            echo json_encode([
+                'success' => true,
+                'message' => "Orden de desposte {$nroOrden} anulada exitosamente. Se restituyeron {$res['peso_restituido']} kg a la recepción {$res['nro_recepcion']}.",
+                'data' => $res
+            ]);
+        } catch (Throwable $e) {
+            if (Database::isConnectionError($e)) {
+                Database::handleApiError($e);
+                return;
+            }
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
      * Endpoint API para consultar el estado del cruce de documentos en espera en Saint ERP.
      */
     public static function erpStatus(): void

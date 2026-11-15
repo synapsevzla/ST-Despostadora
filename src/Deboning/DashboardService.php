@@ -24,6 +24,7 @@ final class DashboardService
             COUNT(CASE WHEN d.Estado = 'ABIERTA' OR (d.Estado = 'EN_PROCESO' AND ISNULL(d.PesoTotalCortes, 0) = 0) THEN 1 END) AS abiertas,
             COUNT(CASE WHEN d.Estado = 'EN_PROCESO' AND ISNULL(d.PesoTotalCortes, 0) > 0 THEN 1 END) AS en_proceso,
             COUNT(CASE WHEN d.Estado IN ('FINALIZADO', 'TERMINADA', 'TERMINADO', 'CERRADA', 'CERRADO') THEN 1 END) AS terminadas,
+            COUNT(CASE WHEN d.Estado = 'ANULADO' THEN 1 END) AS anuladas,
             COUNT(*) AS total
         FROM ST_Despostadora_Despostes d";
 
@@ -34,6 +35,7 @@ final class DashboardService
             'abiertas'   => (int)($row['abiertas'] ?? 0),
             'en_proceso' => (int)($row['en_proceso'] ?? 0),
             'terminadas' => (int)($row['terminadas'] ?? 0),
+            'anuladas'   => (int)($row['anuladas'] ?? 0),
             'total'      => (int)($row['total'] ?? 0),
         ];
     }
@@ -111,8 +113,8 @@ final class DashboardService
                         CASE 
                             WHEN r.PesoDisponible <= 0 THEN 0
                             ELSE CASE 
-                                WHEN r.CantidadEspecies - ISNULL((SELECT SUM(d.CantidadProcesada) FROM ST_Despostadora_Despostes d WHERE d.NroRecepcion = r.NroRecepcion), 0) < 0 THEN 0
-                                ELSE r.CantidadEspecies - ISNULL((SELECT SUM(d.CantidadProcesada) FROM ST_Despostadora_Despostes d WHERE d.NroRecepcion = r.NroRecepcion), 0)
+                                WHEN r.CantidadEspecies - ISNULL((SELECT SUM(d.CantidadProcesada) FROM ST_Despostadora_Despostes d WHERE d.NroRecepcion = r.NroRecepcion AND d.Estado <> 'ANULADO'), 0) < 0 THEN 0
+                                ELSE r.CantidadEspecies - ISNULL((SELECT SUM(d.CantidadProcesada) FROM ST_Despostadora_Despostes d WHERE d.NroRecepcion = r.NroRecepcion AND d.Estado <> 'ANULADO'), 0)
                             END
                         END
                     )

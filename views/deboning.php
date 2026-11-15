@@ -228,13 +228,17 @@ ob_start();
                                         <span class="badge badge-success">EN PROCESO</span>
                                     <?php elseif ($o['Estado'] === 'FINALIZADO'): ?>
                                         <span class="badge" style="background: rgba(193, 218, 198, 0.15); color: var(--success); border: 1px solid rgba(193, 218, 198, 0.3);">FINALIZADO</span>
+                                    <?php elseif ($o['Estado'] === 'ANULADO'): ?>
+                                        <span class="badge" style="background: rgba(238, 103, 55, 0.15); color: var(--danger); border: 1px solid rgba(238, 103, 55, 0.3);">ANULADO</span>
                                     <?php else: ?>
                                         <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); border: 1px solid var(--border-color);"><?= Security::escape($o['Estado']) ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding: 0.75rem 0.5rem; text-align: center;">
-                                    <?php if ($o['Estado'] !== 'FINALIZADO'): ?>
+                                    <?php if ($o['Estado'] === 'EN_PROCESO'): ?>
                                         <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;">EN MESA</span>
+                                    <?php elseif ($o['Estado'] === 'ANULADO'): ?>
+                                        <span class="badge" style="background: rgba(238, 103, 55, 0.15); color: var(--danger); font-size: 0.7rem;">ANULADO (SIN ERP)</span>
                                     <?php else: ?>
                                         <?php 
                                             $cruce = $o['EstadoCruceERP'] ?? 'PENDIENTE_CIERRE';
@@ -292,6 +296,8 @@ ob_start();
                                     <span class="badge badge-success">EN PROCESO</span>
                                 <?php elseif ($o['Estado'] === 'FINALIZADO'): ?>
                                     <span class="badge" style="background: rgba(193, 218, 198, 0.15); color: var(--success); font-size: 0.7rem;">FINALIZADO</span>
+                                <?php elseif ($o['Estado'] === 'ANULADO'): ?>
+                                    <span class="badge" style="background: rgba(238, 103, 55, 0.15); color: var(--danger); font-size: 0.7rem;">ANULADO</span>
                                 <?php else: ?>
                                     <span class="badge" style="background: rgba(140, 115, 101, 0.2); color: var(--text-muted); font-size: 0.7rem;"><?= Security::escape($o['Estado']) ?></span>
                                 <?php endif; ?>
@@ -436,6 +442,10 @@ ob_start();
                 <button type="button" class="btn btn-outline" data-action="view-board">
                     ← Volver al Tablero
                 </button>
+                <button type="button" class="btn btn-outline" id="btnPromptAnnulStation" data-action="prompt-annul-order" style="border-color:rgba(238,103,55,0.4); color:var(--danger); font-size:0.82rem; padding:0.35rem 0.7rem; align-items:center; gap:5px;" title="Anular la orden y regresar canal a la recepción">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:14px; height:14px; stroke:var(--danger);"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+                    Anular Desposte
+                </button>
                 <button type="button" class="btn btn-danger" id="btnPromptCloseStation" data-action="prompt-close-order">
                     <svg class="icon" viewBox="0 0 24 24" style="width:16px; height:16px; margin-right:6px;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                     Finalizar y Cerrar Desposte
@@ -519,6 +529,7 @@ ob_start();
 <?php require __DIR__ . '/modal_deboning_weigh.php'; ?>
 <?php require __DIR__ . '/modal_deboning_edit_cut.php'; ?>
 <?php require __DIR__ . '/modal_deboning_close.php'; ?>
+<?php require __DIR__ . '/modal_deboning_annul.php'; ?>
 <?php require __DIR__ . '/modal_deboning_closed_notice.php'; ?>
 <?php require __DIR__ . '/modal_erp_docs.php'; ?>
 <?php require __DIR__ . '/modal_deboning_audit.php'; ?>
@@ -529,6 +540,7 @@ ob_start();
 <script src="/js/deboning_sync.js"></script>
 <script src="/js/deboning_audit.js"></script>
 <script src="/js/deboning_erp_modal.js"></script>
+<script src="/js/deboning_annul.js"></script>
 
 <?php
 $content = ob_get_clean();
