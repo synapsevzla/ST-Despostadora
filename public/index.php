@@ -1,6 +1,14 @@
 <?php
 declare(strict_types=1);
 
+// En el servidor embebido de PHP (CLI server), servir archivos estáticos existentes directamente
+if (php_sapi_name() === 'cli-server') {
+    $requestedPath = __DIR__ . parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    if (is_file($requestedPath)) {
+        return false;
+    }
+}
+
 // Autocarga nativa PSR-4 ligera para evitar errores de clases no encontradas
 spl_autoload_register(function (string $class): void {
     $prefixes = [
