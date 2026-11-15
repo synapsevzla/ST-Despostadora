@@ -170,15 +170,18 @@ ob_start();
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
-                                    <?php if ($rec['MetodoEntrada'] === 'PESO_INDIVIDUAL'): ?>
-                                        <button type="button" class="btn btn-ver-piezas" style="background: var(--bg-card); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 0.3rem 0.6rem; color: var(--primary);" 
-                                                data-nrorec="<?= Security::escape($rec['NroRecepcion']) ?>">
-                                            Ver Piezas
-                                        </button>
-                                    <?php else: ?>
-                                        <span style="color: var(--text-muted); font-size: 0.8rem;">-</span>
-                                    <?php endif; ?>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center; white-space: nowrap;">
+                                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                                        <a href="/recepcion/imprimir?nro=<?= urlencode((string)$rec['NroRecepcion']) ?>&autoprint=1" target="_blank" class="btn btn-outline" style="padding: 0.3rem 0.55rem; font-size: 0.8rem; width: auto; text-decoration: none;" title="Imprimir Comprobante de Recepción">
+                                            <svg class="icon" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                        </a>
+                                        <?php if ($rec['MetodoEntrada'] === 'PESO_INDIVIDUAL'): ?>
+                                            <button type="button" class="btn btn-ver-piezas" style="background: var(--bg-card); border: 1px solid var(--border-color); font-size: 0.8rem; padding: 0.3rem 0.6rem; color: var(--primary);" 
+                                                    data-nrorec="<?= Security::escape($rec['NroRecepcion']) ?>">
+                                                Ver Piezas
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -265,6 +268,10 @@ ob_start();
                         </div>
 
                         <div class="data-card-footer">
+                            <a href="/recepcion/imprimir?nro=<?= urlencode((string)$rec['NroRecepcion']) ?>&autoprint=1" target="_blank" class="btn btn-outline data-card-btn" style="text-decoration: none;" title="Imprimir Comprobante">
+                                <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                Imprimir
+                            </a>
                             <?php if ($rec['MetodoEntrada'] === 'PESO_INDIVIDUAL'): ?>
                                 <button type="button" class="btn btn-outline btn-ver-piezas data-card-btn" data-nrorec="<?= Security::escape($rec['NroRecepcion']) ?>">
                                     <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
@@ -353,6 +360,13 @@ ob_start();
         </div>
         <div id="contenedorPiezasDetalle" style="display: flex; flex-direction: column; gap: 0.4rem;">
             <!-- Contenido dinámico -->
+        </div>
+        <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.5rem;">
+            <a id="btnImprimirModalPiezas" href="#" target="_blank" class="btn btn-primary" style="font-size: 0.85rem; padding: 0.45rem 1rem; text-decoration: none;">
+                <svg class="icon" viewBox="0 0 24 24" style="width: 15px; height: 15px; margin-right: 4px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Imprimir Comprobante
+            </a>
+            <button type="button" class="btn btn-outline" data-action="cerrar-modal-detalle-piezas" style="font-size: 0.85rem; padding: 0.45rem 1rem;">Cerrar</button>
         </div>
     </div>
 </div>

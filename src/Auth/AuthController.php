@@ -6,6 +6,7 @@ namespace Src\Auth;
 use Config\Database;
 use Config\Security;
 use Src\Database\MigrationRunner;
+use Src\Utils\AuditService;
 use Src\Utils\View;
 use PDO;
 use Exception;
@@ -58,6 +59,10 @@ final class AuthController
         $rateKey = "login_{$clientIp}_{$codusua}";
 
         if (!RateLimiter::check($rateKey, 5, 300)) {
+            AuditService::log('SEGURIDAD', $codusua !== '' ? $codusua : 'DESCONOCIDO', 'BLOQUEO_INTENTOS', $codusua !== '' ? $codusua : 'SYSTEM', [
+                'motivo' => 'Excedido límite de 5 intentos fallidos (bloqueo 5 min)',
+                'ip' => $clientIp
+            ]);
             self::showLogin('Demasiados intentos fallidos. Espere 5 minutos antes de reintentar.');
             return;
         }
@@ -90,6 +95,11 @@ final class AuthController
 
             if (!$user || !hash_equals((string)$user['Clave'], $clave)) {
                 RateLimiter::hit($rateKey);
+                AuditService::log('SEGURIDAD', $codusua, 'LOGIN_FALLIDO', $codusua, [
+                    'email' => $email,
+                    'motivo' => 'Credenciales inválidas',
+                    'ip' => $clientIp
+                ]);
                 self::showLogin('Credenciales incorrectas. Verifique usuario, email o contraseña.');
                 return;
             }
@@ -99,6 +109,11 @@ final class AuthController
             $nivelNum = (int)$nivel;
             if ($nivel !== '01' && $nivel !== '02' && $nivelNum !== 1 && $nivelNum !== 2) {
                 RateLimiter::hit($rateKey);
+                AuditService::log('SEGURIDAD', $codusua, 'LOGIN_NIVEL_DENEGADO', $codusua, [
+                    'nivel' => $nivel,
+                    'motivo' => 'Nivel no permitido para la aplicación',
+                    'ip' => $clientIp
+                ]);
                 self::showLogin('Acceso no autorizado. Esta aplicación solo permite el ingreso a usuarios de nivel 01 o 02.');
                 return;
             }
@@ -113,6 +128,13 @@ final class AuthController
             $_SESSION['user_nivel']   = trim((string)$user['Nivel']);
             $_SESSION['user_codvend'] = trim((string)$user['CodVend']);
             $_SESSION['logged_at']    = time();
+
+            AuditService::log('SEGURIDAD', trim((string)$user['codusUa']), 'LOGIN_EXITOSO', trim((string)$user['codusUa']), [
+                'nivel' => $nivel,
+                'descrip' => trim((string)$user['descrip']),
+                'email' => trim((string)$user['email']),
+                'ip' => $clientIp
+            ]);
 
             // Ejecución de migraciones pendientes tras login exitoso
             try {
@@ -135,6 +157,13 @@ final class AuthController
     public static function handleLogout(): void
     {
         Security::initSession();
+        $codusua = (string)($_SESSION['user_codusua'] ?? '');
+        if ($codusua !== '') {
+            AuditService::log('SEGURIDAD', $codusua, 'LOGOUT', $codusua, [
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+            ]);
+        }
+
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
@@ -180,11 +209,61 @@ final class AuthController
     {
         $user = self::checkAuth();
         if (!self::isLevelOne($user['nivel'] ?? '')) {
+            AuditService::log('SEGURIDAD', (string)($user['codusua'] ?? 'DESCONOCIDO'), 'ACCESO_403_DENEGADO', (string)($user['codusua'] ?? 'DESCONOCIDO'), [
+                'url' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+                'nivel' => (string)($user['nivel'] ?? ''),
+                'metodo' => (string)($_SERVER['REQUEST_METHOD'] ?? 'GET'),
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+            ]);
             http_response_code(403);
             View::render('errors/403', [
                 'user' => $user,
                 'title' => 'Acceso Denegado'
             ]);
+            exit;
+        }
+
+        return $user;
+    }
+
+    public static function requireAdminApi(): array
+    {
+        Security::initSession();
+        if (empty($_SESSION['user_codusua'])) {
+            http_response_code(401);
+            if (!headers_sent()) {
+                header('Content-Type: application/json; charset=utf-8');
+            }
+            echo json_encode([
+                'success' => false,
+                'error' => 'Sesión no iniciada o expirada. Por favor inicie sesión.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        $user = [
+            'codusua' => (string)$_SESSION['user_codusua'],
+            'descrip' => (string)($_SESSION['user_descrip'] ?? ''),
+            'email'   => (string)($_SESSION['user_email'] ?? ''),
+            'nivel'   => (string)($_SESSION['user_nivel'] ?? ''),
+            'codvend' => (string)($_SESSION['user_codvend'] ?? ''),
+        ];
+
+        if (!self::isLevelOne($user['nivel'])) {
+            AuditService::log('SEGURIDAD', $user['codusua'], 'ACCESO_403_API_DENEGADO', $user['codusua'], [
+                'url' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+                'nivel' => $user['nivel'],
+                'metodo' => (string)($_SERVER['REQUEST_METHOD'] ?? 'GET'),
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'
+            ]);
+            http_response_code(403);
+            if (!headers_sent()) {
+                header('Content-Type: application/json; charset=utf-8');
+            }
+            echo json_encode([
+                'success' => false,
+                'error' => 'Acceso denegado: Privilegio de Administrador (Nivel 01 o 1) requerido para esta operación.'
+            ], JSON_UNESCAPED_UNICODE);
             exit;
         }
 

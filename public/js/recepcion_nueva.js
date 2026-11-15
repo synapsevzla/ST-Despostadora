@@ -389,9 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 isSubmitting = true;
                 sessionStorage.removeItem('st_draft_recepcion_nueva');
                 showAlert(data.message || 'Recepción registrada con éxito. Redirigiendo...', 'success');
+                if (data.nro_recepcion) {
+                    window.open('/recepcion/imprimir?nro=' + encodeURIComponent(data.nro_recepcion) + '&autoprint=1', '_blank');
+                }
                 setTimeout(() => {
                     window.location.href = '/recepcion';
-                }, 1000);
+                }, 1200);
             } else {
                 showAlert(data.error || 'Ocurrió un error al registrar la recepción.');
                 if (btnSubmit) {

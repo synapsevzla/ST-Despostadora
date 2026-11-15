@@ -33,6 +33,7 @@ require_once __DIR__ . '/../config/security.php';
 require_once __DIR__ . '/../config/Assets.php';
 require_once __DIR__ . '/../src/Utils/View.php';
 require_once __DIR__ . '/../src/Utils/AuditService.php';
+require_once __DIR__ . '/../src/Utils/BarcodeService.php';
 require_once __DIR__ . '/../src/Database/MigrationRunner.php';
 require_once __DIR__ . '/../src/Auth/RateLimiter.php';
 require_once __DIR__ . '/../src/Auth/AuthController.php';
@@ -52,6 +53,8 @@ require_once __DIR__ . '/../src/Deboning/DeboningService.php';
 require_once __DIR__ . '/../src/Deboning/DeboningController.php';
 require_once __DIR__ . '/../src/Deboning/DashboardService.php';
 require_once __DIR__ . '/../src/Deboning/DashboardController.php';
+require_once __DIR__ . '/../src/Audit/AuditQueryService.php';
+require_once __DIR__ . '/../src/Audit/AuditController.php';
 
 use Config\Database;
 use Config\Security;
@@ -61,6 +64,7 @@ use Src\Deboning\ConfigController;
 use Src\Deboning\ReceptionController;
 use Src\Deboning\DeboningController;
 use Src\Deboning\DashboardController;
+use Src\Audit\AuditController;
 use Src\Utils\View;
 
 // Iniciar sesión segura y cabeceras HTTP
@@ -111,6 +115,10 @@ try {
 
     case '/recepcion/nueva':
         ReceptionController::nueva();
+        break;
+
+    case '/recepcion/imprimir':
+        ReceptionController::imprimir();
         break;
 
     case '/api/recepcion/crear':
@@ -197,6 +205,11 @@ try {
         DeboningController::nueva();
         break;
 
+    case '/desposte/imprimir':
+    case '/deboning/imprimir':
+        DeboningController::imprimir();
+        break;
+
     case '/api/desposte/abrir':
         if ($requestMethod === 'POST') {
             DeboningController::open();
@@ -259,6 +272,38 @@ try {
 
     case '/api/dashboard/kpis':
         DashboardController::apiSummary();
+        break;
+
+    case '/auditoria':
+        AuditController::index();
+        break;
+
+    case '/api/auditoria/kpis':
+        AuditController::apiKpis();
+        break;
+
+    case '/api/auditoria/eventos':
+        AuditController::apiEvents();
+        break;
+
+    case '/api/auditoria/pesajes-log':
+        AuditController::apiCutsLog();
+        break;
+
+    case '/api/auditoria/mermas-criticas':
+        AuditController::apiYieldAnomalies();
+        break;
+
+    case '/api/auditoria/seguridad':
+        AuditController::apiSecurity();
+        break;
+
+    case '/api/auditoria/trazabilidad':
+        AuditController::apiTraceability();
+        break;
+
+    case '/api/auditoria/exportar-csv':
+        AuditController::exportCsv();
         break;
 
     default:

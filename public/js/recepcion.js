@@ -43,6 +43,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modalEl || !cont) return;
 
         if (titulo) titulo.textContent = 'Detalle de Reses: ' + nroRecepcion;
+        const btnPrint = document.getElementById('btnImprimirModalPiezas');
+        if (btnPrint) {
+            btnPrint.href = '/recepcion/imprimir?nro=' + encodeURIComponent(nroRecepcion) + '&autoprint=1';
+        }
         cont.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Cargando piezas recibidas...</div>';
         modalEl.style.display = 'flex';
         modalEl.classList.add('active');

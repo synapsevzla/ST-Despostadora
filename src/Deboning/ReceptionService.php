@@ -462,4 +462,88 @@ final class ReceptionService
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Obtiene el conjunto completo de datos para el formato de impresión de recepción,
+     * incluyendo datos de empresa, especie, depósito, piezas individuales y cruce con Saint ERP.
+     *
+     * @param string $nroRecepcion
+     * @return array<string, mixed>
+     */
+    public static function getReceptionPrintData(string $nroRecepcion): array
+    {
+        $pdo = Database::getConnection();
+        $nro = trim($nroRecepcion);
+
+        // Sincronizar estado del documento en espera si ya fue procesado en Saint ERP
+        ReceptionErpHoldService::getHoldDocumentStatus($pdo, $nro);
+
+        // 1. Consultar encabezado de la recepción
+        $stmt = $pdo->prepare("SELECT 
+                                    r.NroRecepcion, r.FechaHora, r.CodUsua, r.CodUbic, r.CodProdCanal,
+                                    CAST(r.CostActCanal AS FLOAT) AS CostActCanal,
+                                    r.MetodoEntrada, r.CantidadEspecies,
+                                    CAST(r.PesoTotalBruto AS FLOAT) AS PesoTotalBruto,
+                                    CAST(r.TaraTotal AS FLOAT) AS TaraTotal,
+                                    CAST(r.PesoTotalNeto AS FLOAT) AS PesoTotalNeto,
+                                    CAST(r.CostoTotalNeto AS FLOAT) AS CostoTotalNeto,
+                                    CAST(r.PesoDisponible AS FLOAT) AS PesoDisponible,
+                                    r.Estado, r.Observaciones,
+                                    r.DocEsperaEnviado, r.DocEsperaNumeroD, r.FechaDocEspera,
+                                    r.DocEsperaProcesado, r.DocEsperaNumeroDOficial,
+                                    r.DocEsperaTipoOpIFinal, r.FechaDocEsperaProcesado,
+                                    LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreCanal,
+                                    p.Unidad,
+                                    ISNULL(d.Descrip, r.CodUbic) AS NombreUbicacion,
+                                    ISNULL(u.Descrip, r.CodUsua) AS NombreUsuario
+                                FROM ST_Despostadora_Recepciones r
+                                LEFT JOIN SAPROD p ON p.CodProd = r.CodProdCanal
+                                LEFT JOIN SADEPO d ON d.CodUbic = r.CodUbic
+                                LEFT JOIN SSUSRS u ON u.CodUsua = r.CodUsua
+                                WHERE r.NroRecepcion = :nro");
+        $stmt->bindValue(':nro', $nro, PDO::PARAM_STR);
+        $stmt->execute();
+        $rec = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rec) {
+            throw new RuntimeException("La recepción '{$nro}' no existe.");
+        }
+
+        // 2. Consultar datos de la empresa desde SACONF
+        $stmtEmp = $pdo->query("SELECT TOP 1 NroSerial, Descrip FROM SACONF ORDER BY CASE WHEN CodSucu = '00000' THEN 0 ELSE 1 END");
+        $empresa = $stmtEmp ? ($stmtEmp->fetch(PDO::FETCH_ASSOC) ?: []) : [];
+
+        // 3. Consultar piezas individuales si aplica
+        $piezas = [];
+        if (($rec['MetodoEntrada'] ?? '') === 'PESO_INDIVIDUAL') {
+            $piezas = self::getReceptionDetail($nro);
+        }
+
+        // 4. Datos de configuración ERP
+        $codOper = ConfigService::getConfig('ERP_CODOPER_RECEPCION', 'CMP');
+        $codEsta = ConfigService::getConfig('ERP_CODESTA_DEFAULT', 'DESPOSTE');
+        $autoriPrefijo = ConfigService::getConfig('ERP_AUTORI_PREFIJO', 'DOC.ESP-');
+
+        return [
+            'recepcion' => $rec,
+            'empresa' => [
+                'Nombre' => trim((string)($empresa['Descrip'] ?? 'SOLUCIONES TOTALES DESPOSTADORA')),
+                'RIF' => trim((string)($empresa['NroSerial'] ?? 'J-00000000-0')),
+            ],
+            'piezas' => $piezas,
+            'erp' => [
+                'Modulo' => 'Operaciones de Inventario',
+                'TipoOpI' => 'R',
+                'Signo' => 1,
+                'CodOper' => $codOper,
+                'CodEsta' => $codEsta,
+                'Autori' => $autoriPrefijo . $nro,
+                'NumeroD' => (string)($rec['DocEsperaNumeroD'] ?: $nro),
+                'Procesado' => (bool)$rec['DocEsperaProcesado'],
+                'NumeroDOficial' => (string)($rec['DocEsperaNumeroDOficial'] ?? ''),
+                'TipoOpIFinal' => (string)($rec['DocEsperaTipoOpIFinal'] ?? ''),
+                'FechaProcesado' => (string)($rec['FechaDocEsperaProcesado'] ?? '')
+            ]
+        ];
+    }
 }

@@ -206,4 +206,37 @@ final class ReceptionController
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Muestra la vista de impresión en hoja carta para una recepción dada.
+     */
+    public static function imprimir(): void
+    {
+        AuthController::checkAuth();
+
+        try {
+            $nro = trim((string)($_GET['nro'] ?? ''));
+            if ($nro === '') {
+                http_response_code(400);
+                echo "Correlativo de recepción no especificado.";
+                return;
+            }
+
+            $data = ReceptionService::getReceptionPrintData($nro);
+            $autoprint = (!empty($_GET['autoprint']) && $_GET['autoprint'] === '1');
+
+            View::render('print_recepcion', [
+                'data' => $data,
+                'autoprint' => $autoprint
+            ]);
+        } catch (Throwable $e) {
+            error_log('[RECEPTION PRINT ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
+            http_response_code(500);
+            echo "Error generando formato de impresión: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+        }
+    }
 }

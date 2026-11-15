@@ -476,4 +476,37 @@ final class DeboningController
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+    /**
+     * Muestra la vista de liquidación impresa en hoja carta para una orden de desposte.
+     */
+    public static function imprimir(): void
+    {
+        AuthController::checkAuth();
+
+        try {
+            $nro = trim((string)($_GET['nro'] ?? ''));
+            if ($nro === '') {
+                http_response_code(400);
+                echo "Correlativo de orden de desposte no especificado.";
+                return;
+            }
+
+            $data = DeboningQueryService::getDeboningPrintData($nro);
+            $autoprint = (!empty($_GET['autoprint']) && $_GET['autoprint'] === '1');
+
+            View::render('print_desposte', [
+                'data' => $data,
+                'autoprint' => $autoprint
+            ]);
+        } catch (Throwable $e) {
+            error_log('[DEBONING PRINT ERROR] ' . $e->getMessage());
+            if (Database::isConnectionError($e)) {
+                Database::renderErrorView(Database::MSG_OFFLINE);
+                return;
+            }
+            http_response_code(500);
+            echo "Error generando liquidación de desposte: " . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8');
+        }
+    }
 }

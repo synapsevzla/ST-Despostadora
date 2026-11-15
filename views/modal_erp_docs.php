@@ -103,9 +103,15 @@ declare(strict_types=1);
                 <svg class="icon" viewBox="0 0 24 24" style="width:15px; height:15px;"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                 <span>Verificar Estado ERP en Vivo</span>
             </button>
-            <button type="button" class="btn btn-primary" data-action="close-modal-erp-docs" style="min-width:100px; justify-content:center;">
-                Cerrar
-            </button>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <a id="btnPrintErpModal" href="#" target="_blank" class="btn btn-outline" style="display:inline-flex; align-items:center; gap:6px; text-decoration:none;" title="Imprimir Liquidación y Soporte de Cruce Saint">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:15px; height:15px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    <span>Imprimir Soporte ERP</span>
+                </a>
+                <button type="button" class="btn btn-primary" data-action="close-modal-erp-docs" style="min-width:90px; justify-content:center;">
+                    Cerrar
+                </button>
+            </div>
         </div>
     </div>
 </div>

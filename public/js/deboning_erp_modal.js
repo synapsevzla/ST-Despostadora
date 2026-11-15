@@ -190,6 +190,11 @@
         if (!nroOrden) return;
         currentModalOrder = nroOrden;
 
+        const btnPrint = document.getElementById('btnPrintErpModal');
+        if (btnPrint) {
+            btnPrint.href = '/desposte/imprimir?nro=' + encodeURIComponent(nroOrden) + '&autoprint=1';
+        }
+
         if (titleEl) titleEl.textContent = nroOrden;
         if (globalBadgeEl) {
             globalBadgeEl.className = 'badge';

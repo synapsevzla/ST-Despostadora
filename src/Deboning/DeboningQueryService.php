@@ -255,4 +255,148 @@ final class DeboningQueryService
         $res = self::getOrdersPaginated(null, null, 1, $limit);
         return $res['items'];
     }
+
+    /**
+     * Obtiene el conjunto completo y conciliado de datos para la liquidación impresa de desposte,
+     * incluyendo balance de masas, doble cruce ERP (Descargo y Cargo), códigos de barras y cuadre contable.
+     *
+     * @param string $nroOrden
+     * @return array<string, mixed>
+     */
+    public static function getDeboningPrintData(string $nroOrden): array
+    {
+        $pdo = Database::getConnection();
+        $nro = trim($nroOrden);
+
+        // 1. Obtener balance completo y sincronizar con SAOPEI/SAITEMOPI
+        $calcData = self::getYieldAndCosting($nro);
+        $ord = $calcData['orden'];
+
+        // 2. Datos de empresa desde SACONF
+        $stmtEmp = $pdo->query("SELECT TOP 1 NroSerial, Descrip FROM SACONF ORDER BY CASE WHEN CodSucu = '00000' THEN 0 ELSE 1 END");
+        $empresa = $stmtEmp ? ($stmtEmp->fetch(PDO::FETCH_ASSOC) ?: []) : [];
+
+        // 3. Descripción de depósito operativo
+        $codUbic = (string)($ord['CodUbic'] ?? '');
+        $stmtDep = $pdo->prepare("SELECT Descrip FROM SADEPO WHERE CodUbic = :ubic");
+        $stmtDep->bindValue(':ubic', $codUbic, PDO::PARAM_STR);
+        $stmtDep->execute();
+        $depRow = $stmtDep->fetch(PDO::FETCH_ASSOC);
+        $nombreUbicacion = $depRow ? trim((string)$depRow['Descrip']) : $codUbic;
+
+        // 4. Nombres de usuarios (creación y cierre)
+        $codUsua = (string)($ord['CodUsua'] ?? '');
+        $codUsuaCierre = (string)($ord['CodUsuaCierre'] ?? $codUsua);
+
+        $stmtU1 = $pdo->prepare("SELECT Descrip FROM SSUSRS WHERE CodUsua = :u");
+        $stmtU1->bindValue(':u', $codUsua, PDO::PARAM_STR);
+        $stmtU1->execute();
+        $u1 = $stmtU1->fetch(PDO::FETCH_ASSOC);
+        $nombreUsuaInicio = $u1 ? trim((string)$u1['Descrip']) : $codUsua;
+
+        $stmtU2 = $pdo->prepare("SELECT Descrip FROM SSUSRS WHERE CodUsua = :u");
+        $stmtU2->bindValue(':u', $codUsuaCierre, PDO::PARAM_STR);
+        $stmtU2->execute();
+        $u2 = $stmtU2->fetch(PDO::FETCH_ASSOC);
+        $nombreUsuaCierre = $u2 ? trim((string)$u2['Descrip']) : $codUsuaCierre;
+
+        // 5. Configuración de producto de merma
+        $codProdCanal = (string)($ord['CodProdCanal'] ?? '');
+        $stmtMerma = $pdo->prepare("SELECT ec.CodProdMerma, 
+                                           LTRIM(RTRIM(CONCAT(p.Descrip, ' ', p.Descrip2, ' ', p.Descrip3))) AS NombreMerma,
+                                           p.Unidad
+                                    FROM ST_Despostadora_EspeciesConfig ec
+                                    LEFT JOIN SAPROD p ON p.CodProd = ec.CodProdMerma
+                                    WHERE ec.CodProd = :canal");
+        $stmtMerma->bindValue(':canal', $codProdCanal, PDO::PARAM_STR);
+        $stmtMerma->execute();
+        $mermaRow = $stmtMerma->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        // 6. Configuración de códigos de operación ERP
+        $codOperDescargo = ConfigService::getConfig('ERP_CODOPER_DESCARGO_DESPOSTE', 'PRO001');
+        $codOperCargo = ConfigService::getConfig('ERP_CODOPER_CARGO_DESPOSTE', 'PRO002');
+        $codEsta = ConfigService::getConfig('ERP_CODESTA_DEFAULT', 'DESPOSTE');
+
+        // Formato estándar NumeroD
+        $numSolo = (string)preg_replace('/^DESP-?/i', '', $nro);
+        $numPadded = str_pad($numSolo, 16, '0', STR_PAD_LEFT);
+        $defaultNumDDescargo = 'D-' . $numPadded;
+        $defaultNumDCargo    = 'C-' . $numPadded;
+
+        $numDDescargo = !empty($ord['DocDescargoNumeroD']) ? (string)$ord['DocDescargoNumeroD'] : $defaultNumDDescargo;
+        $numDCargo    = !empty($ord['DocCargoNumeroD']) ? (string)$ord['DocCargoNumeroD'] : $defaultNumDCargo;
+
+        // Balances de paridad
+        $pesoEntrada = (float)$ord['PesoCanalEntrada'];
+        $pesoCortesTotal = (float)$calcData['totales']['PesoCortes'];
+        $pesoMermaTotal = (float)$calcData['totales']['PesoMerma'];
+        $pesoCargoTotal = round($pesoCortesTotal + $pesoMermaTotal, 4);
+
+        $montoEntrada = (float)$ord['CostoTotalCanal'];
+        $montoCargoTotal = (float)$calcData['totales']['TotalCostoRealCortes'];
+
+        return [
+            'orden' => array_merge($ord, [
+                'NombreUbicacion' => $nombreUbicacion,
+                'NombreUsuarioInicio' => $nombreUsuaInicio,
+                'NombreUsuarioCierre' => $nombreUsuaCierre,
+                'TotalKilosCargo' => $pesoCargoTotal,
+                'ParidadKilos' => abs($pesoEntrada - $pesoCargoTotal) < 0.0001,
+                'DiferenciaKilos' => round($pesoEntrada - $pesoCargoTotal, 4),
+                'CuadreMonetario' => abs($montoEntrada - $montoCargoTotal) < 0.01,
+                'DiferenciaMonto' => round($montoEntrada - $montoCargoTotal, 4)
+            ]),
+            'cortes' => $calcData['cortes'],
+            'totales' => $calcData['totales'],
+            'merma_info' => [
+                'CodProdMerma' => (string)($mermaRow['CodProdMerma'] ?? 'MERMA'),
+                'NombreMerma' => (string)($mermaRow['NombreMerma'] ?? 'MERMA DE DESPOSTE'),
+                'Unidad' => (string)($mermaRow['Unidad'] ?? 'KG'),
+                'PesoMerma' => $pesoMermaTotal,
+                'MermaPct' => (float)$ord['MermaPct'],
+                'CostoUnitario' => 0.0000,
+                'TotalItem' => 0.0000,
+                'NroLote' => CorrelativeService::generateBatchNumber($pdo, $nro, 99)
+            ],
+            'empresa' => [
+                'Nombre' => trim((string)($empresa['Descrip'] ?? 'SOLUCIONES TOTALES DESPOSTADORA')),
+                'RIF' => trim((string)($empresa['NroSerial'] ?? 'J-00000000-0')),
+            ],
+            'erp' => [
+                'CodEsta' => $codEsta,
+                'descargo' => [
+                    'Modulo' => 'Operaciones de Inventario',
+                    'TipoOpI' => 'R',
+                    'Signo' => -1,
+                    'CodOper' => $codOperDescargo,
+                    'NumeroD' => $numDDescargo,
+                    'Autori' => 'DOC.DESP.SAL-' . $nro,
+                    'Trazabilidad' => $nro . '-DES',
+                    'Enviado' => (bool)($ord['DocDescargoEnviado'] ?? false),
+                    'Procesado' => (bool)($ord['DocDescargoProcesado'] ?? false),
+                    'NumeroDOficial' => (string)($ord['DocDescargoNumeroDOficial'] ?? ''),
+                    'TipoOpIFinal' => (string)($ord['DocDescargoTipoOpIFinal'] ?? ''),
+                    'FechaProcesado' => (string)($ord['FechaDocDescargoProcesado'] ?? ''),
+                    'Kilos' => $pesoEntrada,
+                    'Monto' => $montoEntrada
+                ],
+                'cargo' => [
+                    'Modulo' => 'Operaciones de Inventario',
+                    'TipoOpI' => 'R',
+                    'Signo' => 1,
+                    'CodOper' => $codOperCargo,
+                    'NumeroD' => $numDCargo,
+                    'Autori' => 'DOC.DESP.ENT-' . $nro,
+                    'Trazabilidad' => $nro . '-CAR',
+                    'Enviado' => (bool)($ord['DocCargoEnviado'] ?? false),
+                    'Procesado' => (bool)($ord['DocCargoProcesado'] ?? false),
+                    'NumeroDOficial' => (string)($ord['DocCargoNumeroDOficial'] ?? ''),
+                    'TipoOpIFinal' => (string)($ord['DocCargoTipoOpIFinal'] ?? ''),
+                    'FechaProcesado' => (string)($ord['FechaDocCargoProcesado'] ?? ''),
+                    'Kilos' => $pesoCargoTotal,
+                    'Monto' => $montoCargoTotal
+                ]
+            ]
+        ];
+    }
 }

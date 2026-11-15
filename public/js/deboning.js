@@ -10,8 +10,7 @@ const getCsrfToken = () => document.querySelector('input[name="csrf_token"]')?.v
     || '';
 
 // Feedback sonoro nativo con Web Audio API
-const audioCtx = (typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined')
-    ? new (window.AudioContext || window.webkitAudioContext)() : null;
+const audioCtx = (typeof window.AudioContext !== 'undefined' || typeof window.webkitAudioContext !== 'undefined') ? new (window.AudioContext || window.webkitAudioContext)() : null;
 function playBeep(type = 'success') {
     if (!audioCtx) return;
     try {
@@ -407,12 +406,10 @@ function promptCloseOrder() {
     const modal = document.getElementById('modalCloseOrder');
     if (modal) modal.style.display = 'flex';
 }
-
 function closeCloseOrderModal() {
     const modal = document.getElementById('modalCloseOrder');
     if (modal) modal.style.display = 'none';
 }
-
 async function executeCloseOrder() {
     if (!currentOrder) return;
     const btn = document.getElementById('btnConfirmCloseOrder');
@@ -427,11 +424,13 @@ async function executeCloseOrder() {
         const res = await fetch('/api/desposte/cerrar', { method: 'POST', body: formData });
         const json = await res.json();
         if (json.success) {
+            const closedOrderNum = currentOrder.NroOrdenDesposte;
             sessionStorage.removeItem('st_active_deboning_order');
             window.history.replaceState({}, '', getBasePath());
             closeCloseOrderModal();
             showAlert(json.message, 'success');
             playBeep('success');
+            window.open('/desposte/imprimir?nro=' + encodeURIComponent(closedOrderNum) + '&autoprint=1', '_blank');
             switchView('board');
         } else {
             playBeep('error');
@@ -494,7 +493,6 @@ async function refreshActiveOrders() {
     }
 }
 
-// Inicialización de Event Listeners (sin inline handlers, 100% CSP compliant)
 document.addEventListener('DOMContentLoaded', () => {
     const urlParams = new URLSearchParams(window.location.search);
     const initialOrderEl = document.getElementById('initialOrderNumber');
@@ -576,6 +574,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btnConfClose = document.getElementById('btnConfirmCloseOrder');
     if (btnConfClose) btnConfClose.addEventListener('click', executeCloseOrder);
+
+    const btnPrintStation = document.getElementById('btnPrintStationOrder');
+    if (btnPrintStation) {
+        btnPrintStation.addEventListener('click', () => {
+            const orderNum = currentOrder?.orden?.NroOrdenDesposte 
+                || (typeof currentOrder === 'object' && currentOrder?.NroOrdenDesposte) 
+                || document.getElementById('stationOrderTitle')?.textContent?.trim();
+            if (orderNum) {
+                window.open('/desposte/imprimir?nro=' + encodeURIComponent(orderNum) + '&autoprint=1', '_blank');
+            }
+        });
+    }
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {

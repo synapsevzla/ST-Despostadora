@@ -259,16 +259,21 @@ ob_start();
                                             <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
-                                <td style="padding: 0.75rem 0.5rem; text-align: center;">
-                                    <?php if ($o['Estado'] === 'EN_PROCESO'): ?>
-                                        <button type="button" class="btn btn-primary btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
-                                            Operar Mesa
-                                        </button>
-                                    <?php else: ?>
-                                        <button type="button" class="btn btn-outline btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
-                                            Ver Balance
-                                        </button>
-                                    <?php endif; ?>
+                                <td style="padding: 0.75rem 0.5rem; text-align: center; white-space: nowrap;">
+                                    <div style="display: inline-flex; align-items: center; gap: 4px;">
+                                        <a href="/desposte/imprimir?nro=<?= urlencode((string)$o['NroOrdenDesposte']) ?>&autoprint=1" target="_blank" class="btn btn-outline" style="padding: 0.3rem 0.55rem; font-size: 0.8rem; width: auto; text-decoration: none;" title="Imprimir Liquidación de Desposte">
+                                            <svg class="icon" viewBox="0 0 24 24" style="width: 14px; height: 14px; stroke: currentColor;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                        </a>
+                                        <?php if ($o['Estado'] === 'EN_PROCESO'): ?>
+                                            <button type="button" class="btn btn-primary btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
+                                                Operar Mesa
+                                            </button>
+                                        <?php else: ?>
+                                            <button type="button" class="btn btn-outline btn-operate-order" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; width: auto;" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
+                                                Ver Balance
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -350,6 +355,10 @@ ob_start();
                         </div>
 
                         <div class="data-card-footer">
+                            <a href="/desposte/imprimir?nro=<?= urlencode((string)$o['NroOrdenDesposte']) ?>&autoprint=1" target="_blank" class="btn btn-outline data-card-btn" style="text-decoration: none;" title="Imprimir Liquidación">
+                                <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                                Imprimir
+                            </a>
                             <button type="button" class="btn <?= $isProcess ? 'btn-primary' : 'btn-outline' ?> btn-operate-order data-card-btn" data-order="<?= Security::escape($o['NroOrdenDesposte']) ?>">
                                 <?php if ($isProcess): ?>
                                     <svg class="icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -435,6 +444,10 @@ ob_start();
                 </button>
             </div>
             <div style="display:flex; gap:0.5rem; align-items:center;">
+                <button type="button" class="btn btn-outline" id="btnPrintStationOrder" style="font-size:0.78rem; padding:0.35rem 0.7rem; align-items:center; gap:5px;" title="Imprimir Liquidación de Desposte">
+                    <svg class="icon" viewBox="0 0 24 24" style="width:14px; height:14px; stroke:var(--primary);"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                    Imprimir
+                </button>
                 <button type="button" class="btn btn-outline" id="btnStationAuditLog" data-action="show-audit-log" style="font-size:0.78rem; padding:0.35rem 0.7rem; align-items:center; gap:5px;" title="Ver bitácora y trazabilidad de pesajes de esta mesa">
                     <svg class="icon" viewBox="0 0 24 24" style="width:14px; height:14px; stroke:var(--primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                     Bitácora
