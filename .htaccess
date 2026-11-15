@@ -1,0 +1,37 @@
+#==============================================================================
+# Soluciones Totales Despostadora - Configuración de Raíz Apache
+# Archivo: .htaccess (Raíz)
+# Propósito: Seguridad estricta, bloqueo de archivos internos y redirección a public/
+#==============================================================================
+
+# Deshabilitar listado de directorios
+Options -Indexes
+Options +FollowSymLinks
+
+# Proteger archivos sensibles, logs, configuraciones y documentación
+<FilesMatch "^\.env|^\.git|\.(sql|json|log|sh|md|bak|conf|dist)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order deny,allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Enrutamiento hacia public/ y bloqueo de carpetas protegidas
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Bloquear acceso directo a directorios protegidos
+    RewriteRule ^(config|database|src|views|scratch|electron|yakpro-po)(\/|$) - [F,L,NC]
+    RewriteRule ^\.env - [F,L,NC]
+
+    # Reenviar peticiones que no ingresen por public/ hacia public/
+    RewriteCond %{REQUEST_URI} !^.*/public/ [NC]
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    DirectoryIndex index.php public/index.php
+</IfModule>

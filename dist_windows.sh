@@ -94,6 +94,9 @@ extension=pdo
 extension=pdo_sqlsrv
 extension=sqlsrv
 
+curl.cainfo = "cacert.pem"
+openssl.cafile = "cacert.pem"
+
 max_execution_time = 0
 memory_limit = 512M
 post_max_size = 64M
@@ -106,6 +109,13 @@ EOF
     success "Runtime PHP Windows x64 y extensiones sqlsrv configuradas."
 else
     success "Runtime PHP Windows x64 detectado y validado en electron/php-win/."
+fi
+
+# Asegurar bundle de certificados SSL/TLS para peticiones HTTPS seguras
+if [[ ! -f "${PHP_WIN_DIR}/cacert.pem" ]]; then
+    info "Descargando bundle de certificados CA (cacert.pem)..."
+    curl -sL "https://curl.se/ca/cacert.pem" -o "${PHP_WIN_DIR}/cacert.pem"
+    success "Certificados CA descargados en php-win/cacert.pem."
 fi
 
 # 4. Asegurar dependencias de Electron

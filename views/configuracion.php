@@ -517,10 +517,10 @@ ob_start();
     </div>
 </div>
 
-<link rel="stylesheet" href="/css/producto-picker.css">
+<link rel="stylesheet" href="<?= Security::baseUrl('/css/producto-picker.css') ?>">
 <?php require __DIR__ . '/partials/modal_busqueda_producto.php'; ?>
-<script src="/js/producto_picker.js"></script>
-<script src="/js/configuracion.js"></script>
+<script src="<?= Security::baseUrl('/js/producto_picker.js') ?>"></script>
+<script src="<?= Security::baseUrl('/js/configuracion.js') ?>"></script>
 
 <style>
 .tab-btn {

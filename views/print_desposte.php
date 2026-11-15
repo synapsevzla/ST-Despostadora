@@ -379,6 +379,6 @@ $pctVariacionCosto = $costoCanalKg > 0.0001 ? (($costoPromedioCortesKg - $costoC
         </div>
     </div>
 
-    <script src="/js/print_toolbar.js"></script>
+    <script src="<?= Security::baseUrl('/js/print_toolbar.js') ?>"></script>
 </body>
 </html>

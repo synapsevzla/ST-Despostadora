@@ -3,17 +3,64 @@ declare(strict_types=1);
 
 use Config\Security;
 use Config\Assets;
+use Src\Auth\LicenseService;
+
+$activeLicense = $licenseInfo ?? LicenseService::getCurrent() ?? LicenseService::check();
+$clienteDesc = !empty($activeLicense['cliente']) ? (string)$activeLicense['cliente'] : LicenseService::getClientName();
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title><?= Security::escape($title ?? 'Soluciones Totales Despostadora') ?></title>
+    <title><?= Security::escape(($title ?? 'Soluciones Totales Despostadora') . ($clienteDesc !== '' && $clienteDesc !== 'Cliente Autorizado' ? " - {$clienteDesc}" : '')) ?></title>
     <link rel="icon" type="image/svg+xml" href="<?= Assets::faviconDataUri() ?>">
-    <link rel="stylesheet" href="/css/app.css">
-    <link rel="stylesheet" href="/css/responsive-cards.css">
-    <link rel="stylesheet" href="/css/toasts.css">
+    <link rel="stylesheet" href="<?= Security::baseUrl('/css/app.css') ?>">
+    <link rel="stylesheet" href="<?= Security::baseUrl('/css/responsive-cards.css') ?>">
+    <link rel="stylesheet" href="<?= Security::baseUrl('/css/toasts.css') ?>">
+    <script>
+        window.APP_BASE_URL = <?= json_encode(rtrim(Security::baseUrl(''), '/')) ?>;
+        (function() {
+            const base = window.APP_BASE_URL;
+            if (base && base !== '') {
+                // Interceptar peticiones fetch relativas a la raíz
+                const origFetch = window.fetch;
+                window.fetch = function(url, options) {
+                    if (typeof url === 'string' && url.startsWith('/') && !url.startsWith(base + '/')) {
+                        url = base + url;
+                    }
+                    return origFetch(url, options);
+                };
+
+                // Ajustar enlaces al hacer clic
+                document.addEventListener('click', function(e) {
+                    const link = e.target.closest('a');
+                    if (link && link.getAttribute('href')) {
+                        const href = link.getAttribute('href');
+                        if (href.startsWith('/') && !href.startsWith('//') && !href.startsWith(base + '/')) {
+                            link.setAttribute('href', base + (href === '/' ? '' : href));
+                        }
+                    }
+                }, true);
+
+                // Ajustar enlaces y formularios estáticos del DOM inicial
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.querySelectorAll('a[href^="/"]:not([href^="//"])').forEach(function(el) {
+                        const h = el.getAttribute('href');
+                        if (!h.startsWith(base + '/') && h !== base) {
+                            el.setAttribute('href', base + (h === '/' ? '' : h));
+                        }
+                    });
+                    document.querySelectorAll('form[action^="/"]:not([action^="//"])').forEach(function(el) {
+                        const a = el.getAttribute('action');
+                        if (!a.startsWith(base + '/') && a !== base) {
+                            el.setAttribute('action', base + (a === '/' ? '' : a));
+                        }
+                    });
+                });
+            }
+        })();
+    </script>
 </head>
 <body class="<?= Security::escape($bodyClass ?? '') ?>">
     <div class="app-shell">
@@ -41,7 +88,7 @@ use Config\Assets;
                 <div class="nav-section-title">Operaciones</div>
                 <ul class="nav-list">
                     <li>
-                        <a href="/" class="nav-link <?= ($activeNav ?? '') === 'home' ? 'active' : '' ?>">
+                        <a href="<?= Security::baseUrl('/') ?>" class="nav-link <?= ($activeNav ?? '') === 'home' ? 'active' : '' ?>">
                             <div class="nav-icon">
                                 <svg class="icon" viewBox="0 0 24 24">
                                     <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -52,7 +99,7 @@ use Config\Assets;
                         </a>
                     </li>
                     <li>
-                        <a href="/recepcion" class="nav-link <?= ($activeNav ?? '') === 'recepcion' ? 'active' : '' ?>">
+                        <a href="<?= Security::baseUrl('/recepcion') ?>" class="nav-link <?= ($activeNav ?? '') === 'recepcion' ? 'active' : '' ?>">
                             <div class="nav-icon">
                                 <svg class="icon" viewBox="0 0 24 24">
                                     <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
@@ -64,7 +111,7 @@ use Config\Assets;
                         </a>
                     </li>
                     <li>
-                        <a href="/deboning" class="nav-link <?= ($activeNav ?? '') === 'deboning' ? 'active' : '' ?>">
+                        <a href="<?= Security::baseUrl('/deboning') ?>" class="nav-link <?= ($activeNav ?? '') === 'deboning' ? 'active' : '' ?>">
                             <div class="nav-icon">
                                 <svg class="icon" viewBox="0 0 24 24">
                                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
@@ -82,7 +129,7 @@ use Config\Assets;
                     if ($userNivel === '01' || $userNivel === '1' || (int)$userNivel === 1): 
                     ?>
                     <li>
-                        <a href="/configuracion" class="nav-link <?= ($activeNav ?? '') === 'configuracion' ? 'active' : '' ?>">
+                        <a href="<?= Security::baseUrl('/configuracion') ?>" class="nav-link <?= ($activeNav ?? '') === 'configuracion' ? 'active' : '' ?>">
                             <div class="nav-icon">
                                 <svg class="icon" viewBox="0 0 24 24">
                                     <circle cx="12" cy="12" r="3"></circle>
@@ -93,7 +140,7 @@ use Config\Assets;
                         </a>
                     </li>
                     <li>
-                        <a href="/auditoria" class="nav-link <?= ($activeNav ?? '') === 'auditoria' ? 'active' : '' ?>">
+                        <a href="<?= Security::baseUrl('/auditoria') ?>" class="nav-link <?= ($activeNav ?? '') === 'auditoria' ? 'active' : '' ?>">
                             <div class="nav-icon">
                                 <svg class="icon" viewBox="0 0 24 24">
                                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
@@ -113,7 +160,7 @@ use Config\Assets;
                         <div class="user-name"><?= Security::escape($user['descrip'] ?? $user['codusua'] ?? 'Usuario') ?></div>
                         <div class="user-role">Nivel: <?= Security::escape($user['nivel'] ?? '1') ?></div>
                     </div>
-                    <a href="/logout" class="logout-link" title="Cerrar Sesión">
+                    <a href="<?= Security::baseUrl('/logout') ?>" class="logout-link" title="Cerrar Sesión">
                         <svg class="icon" viewBox="0 0 24 24">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                             <polyline points="16 17 21 12 16 7"></polyline>
@@ -136,11 +183,30 @@ use Config\Assets;
                         </svg>
                     </button>
                     <h2 class="header-title"><?= Security::escape($pageTitle ?? 'Inicio') ?></h2>
+                    <div class="license-status-badge" title="Serial: <?= Security::escape($activeLicense['nrolicencia'] ?? '') ?> | Vence: <?= Security::escape($activeLicense['fechavencimiento'] ?? 'N/A') ?>">
+                        <svg class="icon" viewBox="0 0 24 24" style="width: 0.95rem; height: 0.95rem; stroke: var(--primary); margin-right: 0.35rem; flex-shrink: 0;" fill="none" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                        <span>Licenciado a: <?= Security::escape($clienteDesc !== '' ? $clienteDesc : 'Cliente Autorizado') ?></span>
+                    </div>
                 </div>
                 <div class="header-right">
                     <div id="liveClock" class="header-datetime" aria-live="polite"></div>
                 </div>
             </header>
+
+            <?php if (!empty($activeLicense) && ($activeLicense['status'] ?? '') === LicenseService::STATUS_VIGENTE_POR_VENCER): ?>
+            <div class="license-warning-bar" role="alert">
+                <div class="license-warning-inner">
+                    <svg class="icon" viewBox="0 0 24 24" style="width: 1.25rem; height: 1.25rem; flex-shrink: 0; stroke: currentColor;" fill="none" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <span><?= Security::escape($activeLicense['message'] ?? 'Su licencia está próxima a vencer. Contacte a su distribuidor') ?></span>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <main class="content-body">
                 <?= $content ?? '' ?>
@@ -148,6 +214,6 @@ use Config\Assets;
         </div>
     </div>
 
-    <script src="/js/app.js"></script>
+    <script src="<?= Security::baseUrl('/js/app.js') ?>"></script>
 </body>
 </html>

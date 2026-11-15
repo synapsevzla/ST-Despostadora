@@ -232,6 +232,6 @@ $autoprint = !empty($autoprint) || (!empty($_GET['autoprint']) && $_GET['autopri
         </div>
     </div>
 
-    <script src="/js/print_toolbar.js"></script>
+    <script src="<?= Security::baseUrl('/js/print_toolbar.js') ?>"></script>
 </body>
 </html>

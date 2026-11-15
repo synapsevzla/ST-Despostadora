@@ -130,6 +130,12 @@ if [[ -f "${PROJECT_ROOT}/.env.example" ]]; then
     cp -f "${PROJECT_ROOT}/.env.example" "${DIST_DIR}/.env.example"
 fi
 
+# Bundle de Certificados CA (requerido para cURL / OpenSSL en Windows)
+if [[ -f "${PROJECT_ROOT}/config/cacert.pem" ]]; then
+    mkdir -p "${DIST_DIR}/config"
+    cp -f "${PROJECT_ROOT}/config/cacert.pem" "${DIST_DIR}/config/cacert.pem"
+fi
+
 # 7. Depuración de Archivos Internos y Confidenciales en dist_web
 info "Eliminando archivos internos, documentos y artefactos de desarrollo..."
 rm -f "${DIST_DIR}/GEMINI.md" \
@@ -138,6 +144,7 @@ rm -f "${DIST_DIR}/GEMINI.md" \
      "${DIST_DIR}/.env" \
      "${DIST_DIR}/license_cache.json" \
      "${DIST_DIR}/dist_web.sh" \
+     "${DIST_DIR}/dist_webxampp.sh" \
      "${DIST_DIR}/dist_windows.sh" \
      "${DIST_DIR}/dist_linux.sh" 2>/dev/null || true
 
@@ -145,6 +152,7 @@ rm -rf "${DIST_DIR}/yakpro-po" \
        "${DIST_DIR}/dist_windows" \
        "${DIST_DIR}/dist_linux" \
        "${DIST_DIR}/dist_web" \
+       "${DIST_DIR}/dist_webxampp" \
        "${DIST_DIR}/electron" \
        "${DIST_DIR}/scratch" \
        "${DIST_DIR}/VARIOS" \

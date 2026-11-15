@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSidebar();
     initClock();
     initDecimalInputs();
+    initLicenseMonitor();
 });
 
 /**
@@ -354,4 +355,31 @@ function initDecimalInputs() {
             }
         }
     });
+}
+
+/**
+ * Monitor periódico de estado de licencia (Chequeo cada 24 horas para instancias activas 24/7)
+ */
+function initLicenseMonitor() {
+    const INTERVAL_24H = 24 * 60 * 60 * 1000;
+    async function checkStatus() {
+        try {
+            const res = await fetch('/api/licencia/status', {
+                headers: { 'Accept': 'application/json' }
+            });
+            if (res.status === 403) {
+                window.location.reload();
+                return;
+            }
+            if (res.ok) {
+                const data = await res.json();
+                if (data && data.valid === false) {
+                    window.location.reload();
+                }
+            }
+        } catch (e) {
+            // Ignorar errores de red para no interrumpir modo offline
+        }
+    }
+    setInterval(checkStatus, INTERVAL_24H);
 }

@@ -15,6 +15,7 @@ class PhpManager {
     getPhpPaths() {
         let phpExe;
         let phpIni;
+        let caCert;
         let publicPath;
 
         if (app && app.isPackaged) {
@@ -22,6 +23,7 @@ class PhpManager {
             if (process.platform === 'win32') {
                 phpExe = path.join(resPath, 'php-win', 'php.exe');
                 phpIni = path.join(resPath, 'php-win', 'php.ini');
+                caCert = path.join(resPath, 'php-win', 'cacert.pem');
             } else {
                 // Plataforma Linux / Unix
                 const embeddedPhp = path.join(resPath, 'php-linux', 'bin', 'php');
@@ -32,6 +34,7 @@ class PhpManager {
                     phpExe = 'php';
                     phpIni = null;
                 }
+                caCert = null;
             }
             publicPath = path.join(resPath, 'dist_web', 'public');
         } else {
@@ -41,18 +44,31 @@ class PhpManager {
                 if (fs.existsSync(winPhp)) {
                     phpExe = winPhp;
                     phpIni = path.join(__dirname, 'php-win', 'php.ini');
+                    caCert = path.join(__dirname, 'php-win', 'cacert.pem');
                 } else {
                     phpExe = 'php';
                     phpIni = null;
+                    caCert = null;
                 }
             } else {
                 phpExe = 'php';
                 phpIni = null;
+                caCert = null;
             }
             publicPath = path.join(__dirname, '..', 'dist_web', 'public');
         }
 
-        return { phpExe, phpIni, publicPath };
+        // Si caCert no existe en php-win, buscar en config/
+        if (!caCert || !fs.existsSync(caCert)) {
+            const fallbackCa = app && app.isPackaged
+                ? path.join(process.resourcesPath, 'dist_web', 'config', 'cacert.pem')
+                : path.join(__dirname, '..', 'config', 'cacert.pem');
+            if (fs.existsSync(fallbackCa)) {
+                caCert = fallbackCa;
+            }
+        }
+
+        return { phpExe, phpIni, caCert, publicPath };
     }
 
     /**
@@ -88,8 +104,7 @@ class PhpManager {
 
             try {
                 $pdo = new PDO($dsn, $user, $pass, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_TIMEOUT => $timeout
+                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
                 ]);
                 echo json_encode(['success' => true]);
             } catch (Throwable $e) {
@@ -139,7 +154,7 @@ class PhpManager {
      */
     start(port, envConfig = {}) {
         this.port = port;
-        const { phpExe, phpIni, publicPath } = this.getPhpPaths();
+        const { phpExe, phpIni, caCert, publicPath } = this.getPhpPaths();
 
         if (!fs.existsSync(publicPath)) {
             throw new Error(`Directorio público web no encontrado en: ${publicPath}`);
@@ -149,11 +164,18 @@ class PhpManager {
         if (phpIni && fs.existsSync(phpIni)) {
             args.push('-c', phpIni);
         }
+        if (caCert && fs.existsSync(caCert)) {
+            args.push('-d', `curl.cainfo=${caCert}`, '-d', `openssl.cafile=${caCert}`);
+        }
 
-        // Combinar variables de entorno para que PHP herede las credenciales DB
+        // Combinar variables de entorno para que PHP herede las credenciales DB y certificados
         const spawnEnv = {
             ...process.env,
             ...envConfig,
+            ...(caCert && fs.existsSync(caCert) ? {
+                SSL_CERT_FILE: caCert,
+                CURL_CA_BUNDLE: caCert
+            } : {}),
             PHP_CLI_SERVER_WORKERS: '4'
         };
 

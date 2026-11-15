@@ -285,10 +285,10 @@ ob_start();
 }
 </style>
 
-<link rel="stylesheet" href="/css/producto-picker.css">
+<link rel="stylesheet" href="<?= Security::baseUrl('/css/producto-picker.css') ?>">
 <?php require __DIR__ . '/partials/modal_desposte_selectores.php'; ?>
-<script src="/js/desposte_picker.js"></script>
-<script src="/js/desposte_nueva.js"></script>
+<script src="<?= Security::baseUrl('/js/desposte_picker.js') ?>"></script>
+<script src="<?= Security::baseUrl('/js/desposte_nueva.js') ?>"></script>
 
 <?php
 $content = ob_get_clean();

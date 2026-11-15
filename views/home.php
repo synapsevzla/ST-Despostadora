@@ -5,7 +5,7 @@ use Config\Security;
 
 ob_start();
 ?>
-<link rel="stylesheet" href="/css/dashboard.css">
+<link rel="stylesheet" href="<?= Security::baseUrl('/css/dashboard.css') ?>">
 
 <div class="dashboard-wrapper">
     <!-- Banner de Bienvenida y Acciones Rápidas -->
@@ -445,7 +445,7 @@ ob_start();
     </section>
 </div>
 
-<script src="/js/dashboard.js"></script>
+<script src="<?= Security::baseUrl('/js/dashboard.js') ?>"></script>
 <?php
 $content = ob_get_clean();
 $title = 'Dashboard Operativo - ST Despostadora';

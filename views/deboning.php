@@ -547,13 +547,13 @@ ob_start();
 <?php require __DIR__ . '/modal_erp_docs.php'; ?>
 <?php require __DIR__ . '/modal_deboning_audit.php'; ?>
 
-<link rel="stylesheet" href="/css/deboning.css">
-<link rel="stylesheet" href="/css/deboning_multiuser.css">
-<script src="/js/deboning.js"></script>
-<script src="/js/deboning_sync.js"></script>
-<script src="/js/deboning_audit.js"></script>
-<script src="/js/deboning_erp_modal.js"></script>
-<script src="/js/deboning_annul.js"></script>
+<link rel="stylesheet" href="<?= Security::baseUrl('/css/deboning.css') ?>">
+<link rel="stylesheet" href="<?= Security::baseUrl('/css/deboning_multiuser.css') ?>">
+<script src="<?= Security::baseUrl('/js/deboning.js') ?>"></script>
+<script src="<?= Security::baseUrl('/js/deboning_sync.js') ?>"></script>
+<script src="<?= Security::baseUrl('/js/deboning_audit.js') ?>"></script>
+<script src="<?= Security::baseUrl('/js/deboning_erp_modal.js') ?>"></script>
+<script src="<?= Security::baseUrl('/js/deboning_annul.js') ?>"></script>
 
 <?php
 $content = ob_get_clean();

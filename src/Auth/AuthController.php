@@ -19,8 +19,7 @@ final class AuthController
 
         // Si ya está autenticado, redirigir al home
         if (!empty($_SESSION['user_codusua'])) {
-            header('Location: /');
-            exit;
+            Security::redirect('/');
         }
 
         // Si no se pasó un error previo y la conexión a la base de datos falla, mostrar alerta
@@ -143,8 +142,7 @@ final class AuthController
                 error_log('[MIGRATION ERROR ON LOGIN] ' . $mEx->getMessage());
             }
 
-            header('Location: /');
-            exit;
+            Security::redirect('/');
         } catch (\Throwable $e) {
             error_log('[LOGIN ERROR] ' . $e->getMessage());
             $errorMsg = Database::isConnectionError($e) 
@@ -178,16 +176,14 @@ final class AuthController
             );
         }
         session_destroy();
-        header('Location: /login');
-        exit;
+        Security::redirect('/login');
     }
 
     public static function checkAuth(): array
     {
         Security::initSession();
         if (empty($_SESSION['user_codusua'])) {
-            header('Location: /login');
-            exit;
+            Security::redirect('/login');
         }
 
         return [

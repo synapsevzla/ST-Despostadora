@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fecha_hasta: state.filters.dateTo,
             q: state.filters.q
         });
-        window.location.href = `/api/auditoria/exportar-csv?${qParams.toString()}`;
+        window.location.href = (window.APP_BASE_URL || '') + `/api/auditoria/exportar-csv?${qParams.toString()}`;
     });
 
     async function loadKpis() {

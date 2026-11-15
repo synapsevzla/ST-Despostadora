@@ -371,7 +371,7 @@ ob_start();
     </div>
 </div>
 
-<script src="/js/recepcion.js"></script>
+<script src="<?= Security::baseUrl('/js/recepcion.js') ?>"></script>
 
 <style>
 .metodo-radio-btn {

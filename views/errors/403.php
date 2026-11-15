@@ -17,7 +17,7 @@ ob_start();
         No posee privilegios suficientes para ingresar a este módulo. Esta área está restringida exclusivamente a usuarios administradores de nivel <strong>01</strong>.
     </p>
     <div style="margin-top: 1.5rem;">
-        <a href="/" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 500;">
+        <a href="<?= Security::baseUrl('/') ?>" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 0.6rem 1.2rem; border-radius: 8px; font-weight: 500;">
             <svg class="icon" viewBox="0 0 24 24" style="width: 18px; height: 18px;">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>

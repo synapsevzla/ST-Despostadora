@@ -11,7 +11,7 @@ use Config\Assets;
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title><?= Security::escape($title ?? 'Soluciones Totales Despostadora') ?></title>
     <link rel="icon" type="image/svg+xml" href="<?= Assets::faviconDataUri() ?>">
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="<?= Security::baseUrl('/css/app.css') ?>">
 </head>
 <body>
     <div class="auth-wrapper">
@@ -35,7 +35,7 @@ use Config\Assets;
                 </div>
             <?php endif; ?>
 
-            <form action="/login" method="POST" autocomplete="off">
+            <form action="<?= Security::baseUrl('/login') ?>" method="POST" autocomplete="off">
                 <input type="hidden" name="csrf_token" value="<?= Security::escape($csrf_token ?? '') ?>">
 
                 <div class="form-group">

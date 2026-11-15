@@ -55,4 +55,28 @@ final class Security
     {
         return htmlspecialchars((string)$value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
     }
+
+    public static function baseUrl(string $path = ''): string
+    {
+        static $base = null;
+        if ($base === null) {
+            $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+            $dir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/.');
+            if (str_ends_with($dir, '/public')) {
+                $dir = substr($dir, 0, -7);
+            }
+            $base = $dir;
+        }
+        $cleanPath = '/' . ltrim($path, '/');
+        if ($base === '') {
+            return $cleanPath;
+        }
+        return $cleanPath === '/' ? ($base . '/') : ($base . $cleanPath);
+    }
+
+    public static function redirect(string $path): void
+    {
+        header('Location: ' . self::baseUrl($path));
+        exit;
+    }
 }

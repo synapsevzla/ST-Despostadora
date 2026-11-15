@@ -101,6 +101,8 @@ class ConfigManager {
     saveConfig(data) {
         const lines = [
             '# Configuración generada por Asistente de ST Despostadora',
+            'APP_ENV=production',
+            'APP_DEBUG=false',
             `DB_DRIVER=${data.DB_DRIVER || 'sqlsrv'}`,
             `DB_HOST=${data.DB_HOST || '127.0.0.1'}`,
             `DB_PORT=${data.DB_PORT || '1433'}`,

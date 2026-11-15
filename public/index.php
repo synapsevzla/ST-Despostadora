@@ -36,6 +36,7 @@ require_once __DIR__ . '/../src/Utils/AuditService.php';
 require_once __DIR__ . '/../src/Utils/BarcodeService.php';
 require_once __DIR__ . '/../src/Database/MigrationRunner.php';
 require_once __DIR__ . '/../src/Auth/RateLimiter.php';
+require_once __DIR__ . '/../src/Auth/LicenseService.php';
 require_once __DIR__ . '/../src/Auth/AuthController.php';
 require_once __DIR__ . '/../src/Deboning/CorrelativeService.php';
 require_once __DIR__ . '/../src/Deboning/ConfigService.php';
@@ -60,6 +61,7 @@ use Config\Database;
 use Config\Security;
 use Src\Database\MigrationRunner;
 use Src\Auth\AuthController;
+use Src\Auth\LicenseService;
 use Src\Deboning\ConfigController;
 use Src\Deboning\ReceptionController;
 use Src\Deboning\DeboningController;
@@ -81,10 +83,75 @@ try {
     error_log('[MIGRATION ERROR] ' . $e->getMessage());
 }
 
-// Router minimalista nativo
+// Router minimalista nativo con soporte para subcarpetas (XAMPP / Hostings Compartidos)
 $rawUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+
+$scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '');
+$baseDir = rtrim(str_replace('\\', '/', dirname($scriptName)), '/.');
+if ($baseDir !== '' && str_starts_with($rawUri, $baseDir)) {
+    $rawUri = substr($rawUri, strlen($baseDir)) ?: '/';
+} elseif (str_ends_with($baseDir, '/public')) {
+    $parentBase = substr($baseDir, 0, -7);
+    if ($parentBase !== '' && str_starts_with($rawUri, $parentBase)) {
+        $rawUri = substr($rawUri, strlen($parentBase)) ?: '/';
+    }
+}
+
 $requestUri = ($rawUri !== '/' && str_ends_with($rawUri, '/')) ? rtrim($rawUri, '/') : $rawUri;
 $requestMethod = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
+
+// Comprobación de estado y vigencia de Licencia
+$licenseInfo = LicenseService::check();
+
+// Endpoints de licencia (disponibles siempre, incluso con licencia bloqueada)
+if ($requestUri === '/api/licencia/status') {
+    header('Content-Type: application/json; charset=utf-8');
+    http_response_code($licenseInfo['valid'] ? 200 : 403);
+    echo json_encode($licenseInfo, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+if ($requestUri === '/api/licencia/verificar') {
+    if ($requestMethod === 'POST') {
+        $result = LicenseService::verifyOnline();
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code($result['valid'] ? 200 : 400);
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+}
+
+// Si la licencia está bloqueada (vencida, inválida, reloj alterado o sin activación)
+if ($licenseInfo['valid'] === false) {
+    if ($requestUri === '/logout') {
+        AuthController::handleLogout();
+        exit;
+    }
+
+    $isApi = str_starts_with($requestUri, '/api/')
+        || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+        || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+
+    if ($isApi) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'blocked' => true,
+            'error' => $licenseInfo['message'],
+            'license_status' => $licenseInfo['status'],
+            'license' => $licenseInfo
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    http_response_code(403);
+    View::render('license_error', [
+        'license' => $licenseInfo,
+        'title' => 'Licencia Requerida - ST Despostadora'
+    ]);
+    exit;
+}
 
 // Manejo de rutas
 try {

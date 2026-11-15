@@ -88,7 +88,7 @@ $conf->source_directory                 = null;         // self explanatory
 $conf->target_directory                 = null;         // self explanatory
 
 $conf->t_keep                           = array('views');
-$conf->t_skip                           = array('.git', 'yakpro-po', 'dist_web', 'dist_windows', 'dist_linux', 'scratch', 'VARIOS', '.env', 'license_cache.json');
+$conf->t_skip                           = array('.git', 'yakpro-po', 'dist_web', 'dist_webxampp', 'dist_windows', 'dist_linux', 'scratch', 'VARIOS', '.env', 'license_cache.json');
 $conf->allow_and_overwrite_empty_files  = true;         // allow empty files to be kept as is
 
 $conf->max_nested_directory             =   99;

@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     playBeep('success');
                     showAlert(json.message || 'Orden abierta exitosamente. Redirigiendo...', 'success');
                     setTimeout(() => {
-                        window.location.href = `/deboning?order=${encodeURIComponent(json.nro_orden)}`;
+                        window.location.href = (window.APP_BASE_URL || '') + `/deboning?order=${encodeURIComponent(json.nro_orden)}`;
                     }, 400);
                 } else {
                     playBeep('error');
@@ -432,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Enlaces de regreso con confirmación
-    document.querySelectorAll('a[href="/deboning"]').forEach(link => {
+    document.querySelectorAll('a[href="/deboning"], a[href$="/deboning"]').forEach(link => {
         link.addEventListener('click', async (e) => {
             const hasData = (inputPeso && parseFloat(inputPeso.value || '0') > 0) ||
                 (hiddenRecepcion && hiddenRecepcion.value !== '');
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (conf) {
                     isSubmitting = true;
                     sessionStorage.removeItem('st_draft_desposte_nueva');
-                    window.location.href = '/deboning';
+                    window.location.href = (window.APP_BASE_URL || '') + '/deboning';
                 }
             } else {
                 isSubmitting = true;

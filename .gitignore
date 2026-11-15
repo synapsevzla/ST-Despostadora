@@ -13,6 +13,7 @@ yakpro-po/*
 dist_windows/
 dist_linux/
 dist_web/
+dist_webxampp/
 electron/node_modules/
 electron/dist/
 electron/php-win/

@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (typeof showBoard === 'function') {
                         showBoard();
                     } else {
-                        window.location.href = '/deboning';
+                        window.location.href = (window.APP_BASE_URL || '') + '/deboning';
                     }
                     setTimeout(() => {
                         window.location.reload();

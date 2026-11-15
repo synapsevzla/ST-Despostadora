@@ -11,7 +11,7 @@ use Config\Assets;
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title><?= Security::escape($title ?? 'Error de Conexión - ST Despostadora') ?></title>
     <link rel="icon" type="image/svg+xml" href="<?= Assets::faviconDataUri() ?>">
-    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="<?= Security::baseUrl('/css/app.css') ?>">
 </head>
 <body>
     <div class="auth-wrapper">
@@ -44,7 +44,7 @@ use Config\Assets;
                     </svg>
                     Reintentar Conexión
                 </button>
-                <a href="/login" class="btn btn-secondary" style="width: 100%; text-decoration: none; padding: 0.85rem; text-align: center;">
+                <a href="<?= Security::baseUrl('/login') ?>" class="btn btn-secondary" style="width: 100%; text-decoration: none; padding: 0.85rem; text-align: center;">
                     Ir al Inicio de Sesión
                 </a>
             </div>

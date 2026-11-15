@@ -5,7 +5,7 @@ use Config\Security;
 
 ob_start();
 ?>
-<link rel="stylesheet" href="/css/auditoria.css">
+<link rel="stylesheet" href="<?= Security::baseUrl('/css/auditoria.css') ?>">
 
 <div class="audit-container">
     <!-- Header del Módulo -->
@@ -365,7 +365,7 @@ ob_start();
     </div>
 </div>
 
-<script src="/js/auditoria.js"></script>
+<script src="<?= Security::baseUrl('/js/auditoria.js') ?>"></script>
 <?php
 $content = ob_get_clean();
 $title = 'Auditoría y Control Forense - ST Despostadora';

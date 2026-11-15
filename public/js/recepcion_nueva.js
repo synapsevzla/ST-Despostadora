@@ -390,10 +390,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.removeItem('st_draft_recepcion_nueva');
                 showAlert(data.message || 'Recepción registrada con éxito. Redirigiendo...', 'success');
                 if (data.nro_recepcion) {
-                    window.open('/recepcion/imprimir?nro=' + encodeURIComponent(data.nro_recepcion) + '&autoprint=1', '_blank');
+                    window.open((window.APP_BASE_URL || '') + '/recepcion/imprimir?nro=' + encodeURIComponent(data.nro_recepcion) + '&autoprint=1', '_blank');
                 }
                 setTimeout(() => {
-                    window.location.href = '/recepcion';
+                    window.location.href = (window.APP_BASE_URL || '') + '/recepcion';
                 }, 1200);
             } else {
                 showAlert(data.error || 'Ocurrió un error al registrar la recepción.');
@@ -434,7 +434,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Enlaces de regreso con confirmación si hay pesajes cargados
-    document.querySelectorAll('a[href="/recepcion"]').forEach(link => {
+    document.querySelectorAll('a[href="/recepcion"], a[href$="/recepcion"]').forEach(link => {
         link.addEventListener('click', async (e) => {
             if (piezasIndividuales.length > 0) {
                 e.preventDefault();
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (conf) {
                     isSubmitting = true;
                     sessionStorage.removeItem('st_draft_recepcion_nueva');
-                    window.location.href = '/recepcion';
+                    window.location.href = (window.APP_BASE_URL || '') + '/recepcion';
                 }
             } else {
                 isSubmitting = true;

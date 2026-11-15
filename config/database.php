@@ -24,7 +24,12 @@ final class Database
     public static function loadEnv(string $path): void
     {
         if (!file_exists($path)) {
-            return;
+            $envPath = self::getEnv('ENV_PATH');
+            if ($envPath !== '' && file_exists($envPath)) {
+                $path = $envPath;
+            } else {
+                return;
+            }
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);

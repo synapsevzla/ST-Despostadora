@@ -1,0 +1,38 @@
+#==============================================================================
+# Soluciones Totales Despostadora - Enrutador Apache Front Controller
+# Archivo: public/.htaccess
+#==============================================================================
+
+# Deshabilitar listado de directorios
+Options -Indexes
+Options +FollowSymLinks
+
+# Establecer juego de caracteres UTF-8 predeterminado
+AddDefaultCharset UTF-8
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Servir archivos o directorios estáticos existentes directamente
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Redirigir el resto de peticiones al front controller index.php
+    RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+<IfModule !mod_rewrite.c>
+    ErrorDocument 404 index.php
+</IfModule>
+
+# Cabeceras de seguridad y optimización de caché
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+
+    <FilesMatch "\.(css|js|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "max-age=604800, public"
+    </FilesMatch>
+</IfModule>

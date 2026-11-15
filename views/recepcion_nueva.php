@@ -338,7 +338,7 @@ ob_start();
 }
 </style>
 
-<script src="/js/recepcion_nueva.js"></script>
+<script src="<?= Security::baseUrl('/js/recepcion_nueva.js') ?>"></script>
 
 <?php
 $content = ob_get_clean();

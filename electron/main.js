@@ -101,7 +101,8 @@ async function startMainApp() {
         console.log(`[MAIN] Puerto TCP libre asignado: ${appPort}`);
 
         const envConfig = configManager.getConfig();
-        phpManager.start(appPort, envConfig);
+        const envPath = configManager.findEnvPath();
+        phpManager.start(appPort, { ...envConfig, ENV_PATH: envPath || '' });
 
         const isReady = await phpManager.waitForReady();
         if (!isReady) {
