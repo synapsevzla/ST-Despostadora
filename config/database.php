@@ -110,17 +110,13 @@ final class Database
             return true;
         }
 
-        if ($e instanceof PDOException) {
-            return true;
-        }
-
         $prev = $e->getPrevious();
         if ($prev !== null && self::isConnectionError($prev)) {
             return true;
         }
 
         $code = (string)$e->getCode();
-        if (in_array($code, ['08001', '08003', '08004', '08S01', 'HYT00', 'HY000', '20002', 'IM002'], true)) {
+        if (in_array($code, ['08001', '08003', '08004', '08S01', 'HYT00', '20002', 'IM002'], true)) {
             return true;
         }
 

@@ -86,13 +86,14 @@ final class DeboningAnnulmentService
             $stmtStock = $pdo->prepare("
                 UPDATE ST_Despostadora_Existencias
                 SET StockComprometido = CASE 
-                        WHEN StockComprometido >= :peso THEN StockComprometido - :peso 
+                        WHEN StockComprometido >= :peso1 THEN StockComprometido - :peso2 
                         ELSE 0 
                     END,
                     UltimaActualizacion = SYSUTCDATETIME()
                 WHERE CodUbic = :ubic AND CodProd = :prod AND NroLote = :lote
             ");
-            $stmtStock->bindValue(':peso', $pesoCanal, PDO::PARAM_STR);
+            $stmtStock->bindValue(':peso1', $pesoCanal, PDO::PARAM_STR);
+            $stmtStock->bindValue(':peso2', $pesoCanal, PDO::PARAM_STR);
             $stmtStock->bindValue(':ubic', $codUbic, PDO::PARAM_STR);
             $stmtStock->bindValue(':prod', $codProdCanal, PDO::PARAM_STR);
             $stmtStock->bindValue(':lote', $nroRecepcion, PDO::PARAM_STR);
@@ -168,12 +169,12 @@ final class DeboningAnnulmentService
                 SET Estado = 'ANULADO',
                     FechaHoraCierre = SYSUTCDATETIME(),
                     FechaHoraAnulacion = SYSUTCDATETIME(),
-                    CodUsuaCierre = :codusua,
-                    CodUsuaAnulacion = :codusua,
+                    CodUsuaCierre = :codusua1,
+                    CodUsuaAnulacion = :codusua2,
                     MotivoAnulacion = :motivo,
                     Observaciones = CASE 
-                        WHEN Observaciones IS NULL OR Observaciones = '' THEN :obs 
-                        ELSE CONCAT(Observaciones, ' | ', :obs) 
+                        WHEN Observaciones IS NULL OR Observaciones = '' THEN :obs1 
+                        ELSE CONCAT(Observaciones, ' | ', :obs2) 
                     END,
                     PesoTotalCortes = 0,
                     PesoMerma = 0,
@@ -183,12 +184,15 @@ final class DeboningAnnulmentService
                     EstadoCruceERP = 'ANULADO',
                     Version = ISNULL(Version, 1) + 1,
                     UltimaModif = SYSUTCDATETIME(),
-                    UltimoUsuarioModif = :codusua
+                    UltimoUsuarioModif = :codusua3
                 WHERE NroOrdenDesposte = :nroord AND Estado = 'EN_PROCESO'
             ");
-            $stmtUpdOrd->bindValue(':codusua', $codusua, PDO::PARAM_STR);
+            $stmtUpdOrd->bindValue(':codusua1', $codusua, PDO::PARAM_STR);
+            $stmtUpdOrd->bindValue(':codusua2', $codusua, PDO::PARAM_STR);
             $stmtUpdOrd->bindValue(':motivo', $motivo, PDO::PARAM_STR);
-            $stmtUpdOrd->bindValue(':obs', mb_substr($obsAnulacion, 0, 255), PDO::PARAM_STR);
+            $stmtUpdOrd->bindValue(':obs1', mb_substr($obsAnulacion, 0, 255), PDO::PARAM_STR);
+            $stmtUpdOrd->bindValue(':obs2', mb_substr($obsAnulacion, 0, 255), PDO::PARAM_STR);
+            $stmtUpdOrd->bindValue(':codusua3', $codusua, PDO::PARAM_STR);
             $stmtUpdOrd->bindValue(':nroord', $nroOrden, PDO::PARAM_STR);
             $stmtUpdOrd->execute();
 
