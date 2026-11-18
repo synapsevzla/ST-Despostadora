@@ -146,7 +146,9 @@ El proyecto implementa defensas obligatorias contra vulnerabilidades críticas:
 │   ├── deboning.php          # Interfaz operativa de desposte y pesaje
 │   ├── db_error.php          # Pantalla de error estilizada de base de datos
 │   └── license_error.php     # Pantalla de bloqueo/error de licenciamiento
+├── promocionales/            # Videos promocionales y renders (IGNORADO POR AGENTES Y GIT)
 ├── GEMINI.md                 # Especificación técnica, reglas del agente y SQL
+├── AGENTS.md                 # Instrucciones y directivas para agentes de IA
 └── README.md                 # Documentación operativa
 ```
 
@@ -161,3 +163,4 @@ El proyecto implementa defensas obligatorias contra vulnerabilidades críticas:
    - Sin librerías JS pesadas (Vanilla ES6+ puro).
 3. **Seguridad no negociable:** La simplicidad del código nunca prescinde de la sanitización, tokens CSRF, cabeceras seguras ni validaciones estrictas.
 4. **Respeto a los límites de tamaño:** Ningún archivo debe exceder las 600 líneas de código.
+5. **Exclusión estricta de directorios multimedia:** El directorio `promocionales/` contiene renders de video MP4, composiciones y assets audiovisuales de marketing. Los agentes (Gemini y otros) NUNCA deben leer, parsear, escanear ni buscar archivos dentro de `promocionales/` para evitar sobrecargar contexto con binarios o artefactos de medios.

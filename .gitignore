@@ -7,6 +7,9 @@ license_cache.json
 scratch/
 .cache/
 
+# Videos y material promocional (pesados / multimedia)
+promocionales/
+
 #herramientas de tercer que no van a github
 yakpro-po/*
 !yakpro-po/yakpro-po.cnf
